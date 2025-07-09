@@ -10,6 +10,7 @@ import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
+import '../shared/text_styles.dart';
 
 class GratitudeScreen extends StatefulWidget {
   @override
@@ -72,84 +73,92 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BackgroundImage(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            GradientHeader(
-              icon: Icons.favorite,
-              title: 'What are you grateful for today?',
-              iconColor: AppColors.accentYellow,
-            ),
-            const SizedBox(height: 24),
-            EuphoricCardWithBorder(
-              borderColor: AppColors.primaryBlue,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Add something you are grateful for:',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: TextField(
-                            controller: _gratitudeController,
-                            minLines: 1,
-                            maxLines: 3,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter gratitude...',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                            ),
-                            onSubmitted: (_) => _addGratitude(),
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: BackgroundImage(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GradientHeader(
+                    icon: Icons.favorite,
+                    title: 'What are you grateful for today?',
+                    iconColor: AppColors.accentYellow,
+                  ),
+                  const SizedBox(height: 24),
+                  EuphoricCardWithBorder(
+                    borderColor: AppColors.primaryBlue,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Add something you are grateful for:',
+                            style: AppTextStyles.question,
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: GradientButton(
-                            onPressed: _addGratitude,
-                            text: 'Add',
-                            height: 48,
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: TextField(
+                                  controller: _gratitudeController,
+                                  minLines: 1,
+                                  maxLines: 3,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter gratitude...',
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                                  ),
+                                  onSubmitted: (_) => _addGratitude(),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: GradientButton(
+                                  onPressed: _addGratitude,
+                                  text: 'Add',
+                                  height: 48,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: _gratitudes.isEmpty
+                        ? Center(child: Text('No gratitudes added yet.'))
+                        : ListView.separated(
+                            itemCount: _gratitudes.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final gratitude = _gratitudes[index];
+                              return EuphoricCard(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  child: Text(
+                                    gratitude,
+                                    style: AppTextStyles.answer,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: _gratitudes.isEmpty
-                  ? Center(child: Text('No gratitudes added yet.'))
-                  : ListView.separated(
-                      itemCount: _gratitudes.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final gratitude = _gratitudes[index];
-                        return EuphoricCard(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            child: Text(
-                              gratitude,
-                              style: TextStyle(fontSize: 16, color: AppColors.primaryBlue),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+          ),
         ),
       ),
     );

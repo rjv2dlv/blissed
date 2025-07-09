@@ -66,6 +66,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   void initState() {
     super.initState();
     _loadTodayAnswers();
+    Future.microtask(() => _printAllReflectionKeys());
   }
 
   Future<void> _loadTodayAnswers() async {
@@ -102,6 +103,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   }
 
   Future<void> _saveTodayAnswers() async {
+    print('Attempting to save reflection...');
     final prefs = await SharedPreferences.getInstance();
     final todayKey = _todayKey();
     final answers = _controllers.map((c) => c.text).toList();
@@ -111,6 +113,8 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       _submitted = true;
     });
     await PointsUtils.incrementToday();
+    print('Saving reflection to key: self_reflection_${AppDateUtils.getDateKey(DateTime.now())}');
+    print('Value: ${_controllers.map((c) => c.text).toList()}');
   }
 
   String _todayKey() {
@@ -208,7 +212,10 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
-              validator: (value) => value == null || value.isEmpty ? 'Please answer' : null,
+              validator: (value) {
+                print('Validating: $value');
+                return value == null || value.isEmpty ? 'Please answer' : null;
+              },
             ),
           ],
         ),
@@ -250,11 +257,21 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
     );
   }
 
+  Future<void> _printAllReflectionKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    for (var key in keys) {
+      if (key.startsWith('self_reflection_')) {
+        print('Reflection key: $key, value: ${prefs.getStringList(key)}');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BackgroundImage(
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -265,71 +282,78 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
               iconColor: AppColors.accentYellow,
             ),
             const SizedBox(height: 16),
-            if (_submitted)
-              Column(
-                children: [
-                  _buildSummaryCard(),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _resetAnswers,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      elevation: 0,
-                      padding: EdgeInsets.zero,
-                    ),
-                    child: GradientButton(
-                      onPressed: _resetAnswers,
-                      text: 'Reset',
-                    ),
-                  ),
-                ],
-              )
-            else ...[
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildQuestionCard(
-                      _questions[_currentCard]['question'],
-                      _questions[_currentCard]['desc'],
-                      _controllers[_currentCard],
-                      List<String>.from(_questions[_currentCard]['examples']),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Expanded(
+              child: _submitted
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 150),
+                    child: Column(
                       children: [
-                        if (_currentCard > 0)
-                          Expanded(
-                            child: GradientButton(
-                              onPressed: _prevCard,
-                              text: 'Back',
-                            ),
+                        _buildSummaryCard(),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: _resetAnswers,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
                           ),
-                        if (_currentCard > 0) const SizedBox(width: 16),
-                        Expanded(
-                          child: _currentCard == _questions.length - 1
-                              ? GradientButton(
-                                  onPressed: () {
-                                    if (_formKey.currentState!.validate()) {
-                                      _saveTodayAnswers();
-                                    }
-                                  },
-                                  text: 'Submit',
-                                )
-                              : GradientButton(
-                                  onPressed: _nextCard,
-                                  text: 'Next',
-                                ),
+                          child: GradientButton(
+                            onPressed: _resetAnswers,
+                            text: 'Reset',
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                  ],
-                ),
-              ),
-            ],
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 150),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          _buildQuestionCard(
+                            _questions[_currentCard]['question'],
+                            _questions[_currentCard]['desc'],
+                            _controllers[_currentCard],
+                            List<String>.from(_questions[_currentCard]['examples']),
+                          ),
+                          const SizedBox(height: 30),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              if (_currentCard > 0)
+                                Expanded(
+                                  child: GradientButton(
+                                    onPressed: _prevCard,
+                                    text: 'Back',
+                                  ),
+                                ),
+                              if (_currentCard > 0) const SizedBox(width: 16),
+                              Expanded(
+                                child: _currentCard == _questions.length - 1
+                                    ? GradientButton(
+                                        onPressed: () {
+                                          print('About to call _saveTodayAnswers');
+                                          if (_formKey.currentState!.validate()) {
+                                            _saveTodayAnswers();
+                                          }
+                                        },
+                                        text: 'Submit',
+                                      )
+                                    : GradientButton(
+                                        onPressed: _nextCard,
+                                        text: 'Next',
+                                      ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+            ),
           ],
         ),
       ),

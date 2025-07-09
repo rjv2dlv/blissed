@@ -130,7 +130,7 @@ class GradientStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         gradient: LinearGradient(
           colors: gradientColors,
           begin: Alignment.topLeft,
@@ -138,35 +138,35 @@ class GradientStatCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.first.withOpacity(0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: gradientColors.first.withOpacity(0.10),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
             backgroundColor: Colors.white.withOpacity(0.85),
-            child: Icon(icon, color: gradientColors.first, size: 28),
-            radius: 22,
+            child: Icon(icon, color: gradientColors.first, size: 20),
+            radius: 14,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             value,
             style: GoogleFonts.nunito(
-              fontSize: 22,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             title,
             style: GoogleFonts.nunito(
-              fontSize: 13,
+              fontSize: 10,
               color: Colors.white.withOpacity(0.9),
             ),
             textAlign: TextAlign.center,

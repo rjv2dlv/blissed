@@ -130,6 +130,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    print('SelfReflectionScreen build called');
     final titles = [
       'Self-Reflection',
       'Daily Actions',
@@ -196,57 +197,44 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
       ),
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-        decoration: BoxDecoration(
-          color: AppColors.primaryBlue,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.10),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+        width: double.infinity,
+        color: AppColors.primaryBlue,
+        child: BottomNavigationBar(
+          backgroundColor: AppColors.primaryBlue,
+          type: BottomNavigationBarType.fixed,
+          items: [
+            BottomNavigationBarItem(
+              icon: _gradientIcon(Icons.auto_awesome, _selectedIndex == 0, selectedColor: AppColors.teal),
+              label: 'Reflection',
+            ),
+            BottomNavigationBarItem(
+              icon: _gradientIcon(Icons.check_circle_rounded, _selectedIndex == 1, selectedColor: AppColors.teal),
+              label: 'Daily Actions',
+            ),
+            BottomNavigationBarItem(
+              icon: _gradientIcon(Icons.star, _selectedIndex == 2, selectedColor: AppColors.teal),
+              label: 'Best Moment',
+            ),
+            BottomNavigationBarItem(
+              icon: _gradientIcon(Icons.favorite, _selectedIndex == 3, selectedColor: AppColors.teal),
+              label: 'Gratitude',
+            ),
+            BottomNavigationBarItem(
+              icon: _gradientIcon(Icons.timeline_rounded, _selectedIndex == 4, selectedColor: AppColors.teal),
+              label: 'Progress',
             ),
           ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
-          child: BottomNavigationBar(
-            backgroundColor: Colors.transparent,
-            type: BottomNavigationBarType.fixed,
-            items: [
-              BottomNavigationBarItem(
-                icon: _gradientIcon(Icons.auto_awesome, _selectedIndex == 0, selectedColor: AppColors.teal),
-                label: 'Reflection',
-              ),
-              BottomNavigationBarItem(
-                icon: _gradientIcon(Icons.check_circle_rounded, _selectedIndex == 1, selectedColor: AppColors.teal),
-                label: 'Daily Actions',
-              ),
-              BottomNavigationBarItem(
-                icon: _gradientIcon(Icons.star, _selectedIndex == 2, selectedColor: AppColors.teal),
-                label: 'Best Moment',
-              ),
-              BottomNavigationBarItem(
-                icon: _gradientIcon(Icons.favorite, _selectedIndex == 3, selectedColor: AppColors.teal),
-                label: 'Gratitude',
-              ),
-              BottomNavigationBarItem(
-                icon: _gradientIcon(Icons.timeline_rounded, _selectedIndex == 4, selectedColor: AppColors.teal),
-                label: 'Progress',
-              ),
-            ],
-            currentIndex: _selectedIndex,
-            selectedItemColor: AppColors.teal,
-            unselectedItemColor: Colors.white,
-            showUnselectedLabels: true,
-            elevation: 0,
-            onTap: _onItemTapped,
-            selectedFontSize: 16,
-            unselectedFontSize: 14,
-            selectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.teal),
-            unselectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.normal, fontSize: 14, color: Colors.white),
-            landscapeLayout: BottomNavigationBarLandscapeLayout.centered,
-          ),
+          currentIndex: _selectedIndex,
+          selectedItemColor: AppColors.teal,
+          unselectedItemColor: Colors.white,
+          showUnselectedLabels: true,
+          elevation: 0,
+          onTap: _onItemTapped,
+          selectedFontSize: 16,
+          unselectedFontSize: 14,
+          selectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.teal),
+          unselectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.normal, fontSize: 14, color: Colors.white),
+          landscapeLayout: BottomNavigationBarLandscapeLayout.centered,
         ),
       ),
     );

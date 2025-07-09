@@ -8,6 +8,7 @@ import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
+import '../shared/text_styles.dart';
 
 class DailyActionsScreen extends StatefulWidget {
   @override
@@ -90,7 +91,6 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Sort actions: pending first, then completed/rejected
     final sortedActions = List<Map<String, dynamic>>.from(_actions)
       ..sort((a, b) {
         if (a['status'] == b['status']) return 0;
@@ -98,153 +98,162 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         if (b['status'] == 'pending') return 1;
         return 0;
       });
-    return BackgroundImage(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Professional header
-            GradientHeader(
-              icon: Icons.check_circle_outline,
-              title: 'Plan and conquer your day with purposeful actions!',
-              iconColor: AppColors.accentYellow,
-            ),
-            const SizedBox(height: 24),
-            EuphoricCardWithBorder(
-              borderColor: AppColors.primaryBlue,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Add your actions for today:',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: TextField(
-                            controller: _actionController,
-                            minLines: 1,
-                            maxLines: 4,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter an action...',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                            ),
-                            onSubmitted: (_) => _addAction(),
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: BackgroundImage(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GradientHeader(
+                    icon: Icons.check_circle_outline,
+                    title: 'Plan and conquer your day with purposeful actions!',
+                    iconColor: AppColors.accentYellow,
+                  ),
+                  const SizedBox(height: 24),
+                  EuphoricCardWithBorder(
+                    borderColor: AppColors.primaryBlue,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Add your actions for today:',
+                            style: AppTextStyles.question,
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: GradientButton(
-                            onPressed: _addAction,
-                            text: 'Add',
-                            height: 48,
+                          const SizedBox(height: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextField(
+                                controller: _actionController,
+                                minLines: 1,
+                                maxLines: 4,
+                                textAlignVertical: TextAlignVertical.top,
+                                decoration: InputDecoration(
+                                  hintText: 'Enter an action...',
+                                  hintStyle: AppTextStyles.description.copyWith(color: AppColors.textPrimary.withOpacity(0.5)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.3)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: AppColors.teal, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white.withOpacity(0.8),
+                                ),
+                                style: AppTextStyles.answer,
+                                onSubmitted: (_) => _addAction(),
+                              ),
+                              const SizedBox(height: 14),
+                              GradientButton(
+                                onPressed: _addAction,
+                                text: 'Add',
+                                height: 48,
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: sortedActions.isEmpty
-                  ? Center(child: Text('No actions added yet.'))
-                  : ListView.separated(
-                      itemCount: sortedActions.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final action = sortedActions[index];
-                        final originalIndex = _actions.indexOf(action);
-                        Color? borderColor;
-                        if (action['status'] == 'completed') {
-                          borderColor = Colors.green;
-                        } else if (action['status'] == 'rejected') {
-                          borderColor = Colors.red;
-                        }
-                        Widget cardContent = Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                action['text'],
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  decoration: action['status'] == 'completed'
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                  color: action['status'] == 'rejected'
-                                      ? Colors.red
-                                      : Colors.black,
+                  ),
+                  const SizedBox(height: 24),
+                  sortedActions.isEmpty
+                    ? Center(child: Text('No actions added yet.', style: AppTextStyles.answer))
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: sortedActions.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final action = sortedActions[index];
+                          final originalIndex = _actions.indexOf(action);
+                          Color? borderColor;
+                          if (action['status'] == 'completed') {
+                            borderColor = Colors.green;
+                          } else if (action['status'] == 'rejected') {
+                            borderColor = Colors.red;
+                          }
+                          Widget cardContent = Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  action['text'],
+                                  style: AppTextStyles.answer.copyWith(
+                                    decoration: action['status'] == 'completed'
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    color: action['status'] == 'rejected'
+                                        ? Colors.red
+                                        : AppColors.primaryBlue,
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (action['status'] == 'pending')
-                              Row(
-                                children: [
-                                  // Complete toggle
-                                  InkWell(
-                                    borderRadius: BorderRadius.circular(20),
-                                    onTap: () => _markAction(originalIndex, 'completed'),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.15),
-                                        shape: BoxShape.circle,
+                              if (action['status'] == 'pending')
+                                Row(
+                                  children: [
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () => _markAction(originalIndex, 'completed'),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withOpacity(0.15),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        padding: const EdgeInsets.all(6),
+                                        child: Icon(Icons.check, color: Colors.green, size: 22),
                                       ),
-                                      padding: const EdgeInsets.all(6),
-                                      child: Icon(Icons.check, color: Colors.green, size: 22),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Reject toggle
-                                  InkWell(
-                                    borderRadius: BorderRadius.circular(20),
-                                    onTap: () => _markAction(originalIndex, 'rejected'),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.withOpacity(0.15),
-                                        shape: BoxShape.circle,
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () => _markAction(originalIndex, 'rejected'),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withOpacity(0.15),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        padding: const EdgeInsets.all(6),
+                                        child: Icon(Icons.close, color: Colors.red, size: 22),
                                       ),
-                                      padding: const EdgeInsets.all(6),
-                                      child: Icon(Icons.close, color: Colors.red, size: 22),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                              if (action['status'] == 'completed')
+                                const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                              if (action['status'] == 'rejected')
+                                const Icon(Icons.cancel, color: Colors.red, size: 28),
+                            ],
+                          );
+                          if (borderColor != null && action['status'] != 'pending') {
+                            return EuphoricCardWithBorder(
+                              borderColor: borderColor,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                child: cardContent,
                               ),
-                            if (action['status'] == 'completed')
-                              const Icon(Icons.check_circle, color: Colors.green, size: 28),
-                            if (action['status'] == 'rejected')
-                              const Icon(Icons.cancel, color: Colors.red, size: 28),
-                          ],
-                        );
-                        if (borderColor != null && action['status'] != 'pending') {
-                          return EuphoricCardWithBorder(
-                            borderColor: borderColor,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              child: cardContent,
-                            ),
-                          );
-                        } else {
-                          return EuphoricCard(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              child: cardContent,
-                            ),
-                          );
-                        }
-                      },
-                    ),
+                            );
+                          } else {
+                            return EuphoricCard(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                child: cardContent,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

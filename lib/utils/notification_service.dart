@@ -24,7 +24,7 @@ class NotificationService {
   static Future<void> scheduleDailyReflectionReminder(TimeOfDay time) async {
     await _notificationsPlugin.zonedSchedule(
       1001,
-      'Euphoric Days: Time to Reflect!',
+      'Blissed: Time to Reflect!',
       'Don\'t forget to complete your self-reflection and set your intentions.',
       _nextInstanceOfTime(time),
       const NotificationDetails(
@@ -46,7 +46,7 @@ class NotificationService {
   static Future<void> scheduleDailyActionsReminder(TimeOfDay time) async {
     await _notificationsPlugin.zonedSchedule(
       1002,
-      'Euphoric Days: Complete Your Actions!',
+      'Blissed: Complete Your Actions!',
       'You have actions pending for today. Take a step forward!',
       _nextInstanceOfTime(time),
       const NotificationDetails(

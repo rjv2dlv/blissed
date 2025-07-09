@@ -31,6 +31,8 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
         final parts = s.split(':');
         return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
       }).toList();
+      // Sort reminders by time (hour first, then minute)
+      _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
       _isLoading = false;
     });
   }

@@ -6,6 +6,8 @@ import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
+import '../shared/text_styles.dart';
+import '../shared/gradient_button.dart';
 
 class BestMomentScreen extends StatefulWidget {
   @override
@@ -99,19 +101,12 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
         children: [
           Text(
             'What was your best moment today?',
-            style: GoogleFonts.nunito(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+            style: AppTextStyles.question,
           ),
           const SizedBox(height: 8),
           Text(
             'Reflect on the most beautiful, meaningful, or joyful experience you had today.',
-            style: GoogleFonts.nunito(
-              fontSize: 16,
-              color: AppColors.textPrimary.withOpacity(0.7),
-            ),
+            style: AppTextStyles.description,
           ),
           const SizedBox(height: 20),
           TextField(
@@ -121,9 +116,7 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
             textAlignVertical: TextAlignVertical.top,
             decoration: InputDecoration(
               hintText: 'Describe your best moment...',
-              hintStyle: GoogleFonts.nunito(
-                color: AppColors.textPrimary.withOpacity(0.5),
-              ),
+              hintStyle: AppTextStyles.description.copyWith(color: AppColors.textPrimary.withOpacity(0.5)),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.3)),
@@ -135,33 +128,13 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
               filled: true,
               fillColor: Colors.white.withOpacity(0.8),
             ),
-            style: GoogleFonts.nunito(
-              fontSize: 16,
-              color: AppColors.textPrimary,
-            ),
+            style: AppTextStyles.answer,
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _saveMoment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.teal,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-              ),
-              child: Text(
-                'Save Best Moment',
-                style: GoogleFonts.nunito(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+          GradientButton(
+            onPressed: _saveMoment,
+            text: 'Save Best Moment',
+            height: 48,
           ),
         ],
       ),
@@ -179,45 +152,20 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
               const SizedBox(width: 8),
               Text(
                 'Your Best Moment Today',
-                style: GoogleFonts.nunito(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+                style: AppTextStyles.question,
               ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
             _savedMoment!,
-            style: GoogleFonts.nunito(
-              fontSize: 16,
-              color: AppColors.textPrimary,
-              height: 1.5,
-            ),
+            style: AppTextStyles.answer.copyWith(height: 1.5),
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _editMoment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-              ),
-              child: Text(
-                'Update',
-                style: GoogleFonts.nunito(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+          GradientButton(
+            onPressed: _editMoment,
+            text: 'Update',
+            height: 48,
           ),
         ],
       ),

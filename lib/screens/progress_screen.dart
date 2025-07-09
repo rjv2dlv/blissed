@@ -187,18 +187,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     iconColor: AppColors.accentYellow,
                   ),
                   const SizedBox(height: 24),
-                  // Contribution Grid
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    controller: _gridScrollController,
-                    child: _buildContributionGrid(),
-                  ),
+                  // Stat List (List with Icons)
+                  _buildStatisticsSection(),
                   const SizedBox(height: 24),
                   // Points Trend Section
                   _buildPointsTrendSection(),
-                  const SizedBox(height: 24),
-                  // Statistics Cards
-                  _buildStatisticsSection(),
                   const SizedBox(height: 24),
                   // Recent Reflections
                   if (_recentReflections.isNotEmpty) ...[
@@ -223,8 +216,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
+                  // Contribution Grid (calendar view) at the end
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    controller: _gridScrollController,
+                    child: _buildContributionGrid(),
+                  ),
                   // Add extra space at the bottom for better scrollability
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 150),
                 ],
               ),
             ),
@@ -238,15 +237,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
         Text(
           'Points Trend (Last 30 Days)',
           style: GoogleFonts.nunito(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primaryBlue.withOpacity(0.9),
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            color: AppColors.teal,
             letterSpacing: 0.5,
             shadows: [
               Shadow(
-                color: Colors.white.withOpacity(0.7),
-                blurRadius: 2,
-                offset: Offset(0, 1),
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 6,
+                offset: Offset(0, 2),
               ),
             ],
           ),
@@ -491,95 +490,33 @@ class _ProgressScreenState extends State<ProgressScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        // All rows: GradientStatCard style for all stats
-        Row(
-          children: [
-            Expanded(
-              child: GradientStatCard(
-                title: 'Current Streak',
-                value: '${_stats['currentStreak']} days',
-                icon: Icons.local_fire_department,
-                gradientColors: [AppColors.warning, AppColors.primaryBlue],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GradientStatCard(
-                title: 'Best Streak',
-                value: '${_stats['streakDays']} days',
-                icon: Icons.emoji_events,
-                gradientColors: [AppColors.accentYellow, AppColors.primaryBlue],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: GradientStatCard(
-                title: 'Reflections',
-                value: '${_stats['totalReflections']} days',
-                icon: Icons.auto_awesome,
-                gradientColors: [AppColors.primaryBlue, AppColors.teal],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GradientStatCard(
-                title: 'Total Days',
-                value: '${_stats['totalDays']} days',
-                icon: Icons.calendar_today,
-                gradientColors: [AppColors.teal, AppColors.primaryBlue],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: GradientStatCard(
-                title: 'Total Points',
-                value: '${_pointsHistory.values.fold(0, (sum, points) => sum + points)}',
-                icon: Icons.stars,
-                gradientColors: [AppColors.accentYellow, AppColors.teal],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GradientStatCard(
-                title: 'Total Gratitude Added',
-                value: '$_totalGratitude',
-                icon: Icons.favorite,
-                gradientColors: [Colors.purple, AppColors.primaryBlue],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: GradientStatCard(
-                title: 'Total Actions Taken',
-                value: '$_totalActionsTaken',
-                icon: Icons.list_alt,
-                gradientColors: [AppColors.info, AppColors.primaryBlue],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GradientStatCard(
-                title: 'Best Moments',
-                value: '$_totalBestMoments',
-                icon: Icons.star,
-                gradientColors: [AppColors.accentYellow, AppColors.teal],
-              ),
-            ),
-          ],
-        ),
+
+        _buildStatRow(Icons.local_fire_department, 'Current Streak', '${_stats['currentStreak']} days', AppColors.warning),
+        _buildStatRow(Icons.emoji_events, 'Best Streak', '${_stats['streakDays']} days', AppColors.warning),
+
+        _buildStatRow(Icons.stars, 'Total Points', '${_pointsHistory.values.fold(0, (sum, points) => sum + points)}', Colors.purple),
+        _buildStatRow(Icons.list_alt, 'Total Actions Taken', '$_totalActionsTaken', Colors.purple),
+        
+        _buildStatRow(Icons.calendar_today, 'Total Days', '${_stats['totalDays']} days', AppColors.warning),
+        _buildStatRow(Icons.auto_awesome, 'Total Reflections', '${_stats['totalReflections']} days', AppColors.warning),
+        
+        _buildStatRow(Icons.favorite, 'Total Gratitude Added', '$_totalGratitude', Colors.purple),
+        _buildStatRow(Icons.star, 'Total Best Moments', '$_totalBestMoments', Colors.purple),
       ],
+    );
+  }
+
+  Widget _buildStatRow(IconData icon, String title, String value, Color titleColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: titleColor, size: 26),
+          const SizedBox(width: 14),
+          Expanded(child: Text(title, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w600, color: titleColor))),
+          Text(value, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.bold, color: titleColor)),
+        ],
+      ),
     );
   }
 

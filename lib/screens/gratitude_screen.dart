@@ -8,6 +8,7 @@ import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
+import '../shared/text_styles.dart';
 
 class GratitudeScreen extends StatefulWidget {
   @override
@@ -90,35 +91,46 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Add something you are grateful for:',
-                      style: Theme.of(context).textTheme.titleLarge,
+                      'What are you grateful for today?',
+                      style: AppTextStyles.question,
                     ),
-                    const SizedBox(height: 12),
-                    Row(
+                    const SizedBox(height: 8),
+                    Text(
+                      'Reflect on the people, experiences, or things that bring you joy and appreciation.',
+                      style: AppTextStyles.description,
+                    ),
+                    const SizedBox(height: 20),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          flex: 4,
-                          child: TextField(
-                            controller: _gratitudeController,
-                            minLines: 1,
-                            maxLines: 3,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter gratitude...',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                        TextField(
+                          controller: _gratitudeController,
+                          minLines: 2,
+                          maxLines: 5,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: InputDecoration(
+                            hintText: 'Enter gratitude...',
+                            hintStyle: AppTextStyles.description.copyWith(color: AppColors.textPrimary.withOpacity(0.5)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.3)),
                             ),
-                            onSubmitted: (_) => _addGratitude(),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.teal, width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.8),
+
                           ),
+                          style: AppTextStyles.answer,
+                          onSubmitted: (_) => _addGratitude(),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: GradientButton(
-                            onPressed: _addGratitude,
-                            text: 'Add',
-                            height: 48,
-                          ),
+                        const SizedBox(height: 14),
+                        GradientButton(
+                          onPressed: _addGratitude,
+                          text: 'Add',
+                          height: 48,
                         ),
                       ],
                     ),
@@ -129,7 +141,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
             const SizedBox(height: 24),
             Expanded(
               child: _gratitudes.isEmpty
-                  ? Center(child: Text('No gratitudes added yet.'))
+                  ? Center(child: Text('No gratitudes added yet.', style: AppTextStyles.answer))
                   : ListView.separated(
                       itemCount: _gratitudes.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -140,7 +152,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             child: Text(
                               gratitude,
-                              style: TextStyle(fontSize: 16, color: AppColors.primaryBlue),
+                              style: AppTextStyles.answer,
                             ),
                           ),
                         );
