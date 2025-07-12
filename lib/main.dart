@@ -11,6 +11,8 @@ import 'package:flutter/widgets.dart';
 import 'utils/app_colors.dart';
 import 'utils/notification_service.dart';
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 void main() async {
   
@@ -34,11 +36,28 @@ void main() async {
     // TODO: Send error and stackTrace to a crash reporting service
     print('Uncaught Dart error: $error');
     print(stackTrace);
-    FirebaseCrashlytics.instance.recordError(error, stack);
+    FirebaseCrashlytics.instance.recordError(error, stackTrace);
   });
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () => throw Exception('Test Crash'),
+            child: Text('Crash!'),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/*class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
@@ -117,7 +136,7 @@ class MyApp extends StatelessWidget {
       home: const MainNavigation(),
     );
   }
-}
+}*/
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -269,8 +288,3 @@ class _MainNavigationState extends State<MainNavigation> {
     return Icon(icon, color: selectedColor, size: 34);
   }
 }
-
-ElevatedButton(
-  onPressed: () => throw Exception('Test Crash'),
-  child: Text('Crash!'),
-)
