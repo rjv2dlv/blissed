@@ -10,11 +10,27 @@ import 'screens/history_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'utils/app_colors.dart';
 import 'utils/notification_service.dart';
+import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.initialize();
-  runApp(const MyApp());
+  // Global error handler for Flutter framework errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    // TODO: Send error details to a crash reporting service
+    print('FlutterError:');
+    print(details.exceptionAsString());
+    print(details.stack);
+  };
+  // Global error handler for all uncaught Dart errors
+  runZonedGuarded(() async {
+    await NotificationService.initialize();
+    runApp(const MyApp());
+  }, (error, stackTrace) {
+    // TODO: Send error and stackTrace to a crash reporting service
+    print('Uncaught Dart error: $error');
+    print(stackTrace);
+  });
 }
 
 class MyApp extends StatelessWidget {

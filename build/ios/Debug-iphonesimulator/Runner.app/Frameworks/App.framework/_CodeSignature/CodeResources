@@ -24,14 +24,6 @@
 		<data>
 		0WAEoHJ07lheA7rmN5pL2wsR6tA=
 		</data>
-		<key>flutter_assets/assets/butterfly.png</key>
-		<data>
-		KvAsiUVq0wUTg7r2RBsBkLuqI7s=
-		</data>
-		<key>flutter_assets/assets/high_five.png</key>
-		<data>
-		RsBRF5743m92vfYdqjQ/0F0nYY4=
-		</data>
 		<key>flutter_assets/assets/wa_background.jpeg</key>
 		<data>
 		Ota6jmvJYdtj6gw41syJDOHE2Qc=
@@ -46,7 +38,7 @@
 		</data>
 		<key>flutter_assets/kernel_blob.bin</key>
 		<data>
-		l25TA8FskJREAaa8pfvjFGBE+Ws=
+		JgCifr9vQWjHCdxlGwJuL+RFo98=
 		</data>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -91,20 +83,6 @@
 			HvN4AIdJdYF54DrdxuRNhRRK83b4OkCp38G/5heiQ2E=
 			</data>
 		</dict>
-		<key>flutter_assets/assets/butterfly.png</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			k1Yq5268MZJKsKSc460iAhA4VuthBohsgnZywBqdmc4=
-			</data>
-		</dict>
-		<key>flutter_assets/assets/high_five.png</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			X+32pOYOd882GYLS+iVXc3X88j9XaUOgCZe6rS8z63w=
-			</data>
-		</dict>
 		<key>flutter_assets/assets/wa_background.jpeg</key>
 		<dict>
 			<key>hash2</key>
@@ -130,7 +108,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			7CMnv4FTAuQsHCqjkGg/KSolTQXwj4TvdwehK6s9HSQ=
+			oxCagLFG2g4C6PzM9x01rNee1rvxFkZaQwndpgtZqqA=
 			</data>
 		</dict>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>

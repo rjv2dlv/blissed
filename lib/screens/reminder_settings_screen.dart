@@ -31,7 +31,6 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
         final parts = s.split(':');
         return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
       }).toList();
-      // Sort reminders by time (hour first, then minute)
       _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
       _isLoading = false;
     });
@@ -44,8 +43,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
     // Cancel all previous notifications and reschedule
     await NotificationService.cancelAllReminders();
     for (final t in _reminders) {
-      await NotificationService.scheduleDailyReflectionReminder(t);
-      await NotificationService.scheduleDailyActionsReminder(t);
+      await NotificationService.scheduleSmartReminder(t);
     }
   }
 
@@ -96,7 +94,6 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Gradient header card
                     GradientHeader(
                       icon: Icons.alarm,
                       title: 'Set daily reminders to reflect and take action!',

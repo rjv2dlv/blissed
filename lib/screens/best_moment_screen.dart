@@ -70,25 +70,28 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
   @override
   Widget build(BuildContext context) {
     return BackgroundImage(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Professional header
-            GradientHeader(
-              icon: Icons.star,
-              title: 'Capture your most beautiful moment today!',
-              iconColor: AppColors.accentYellow,
-            ),
-            const SizedBox(height: 16),
-            // Best Moment card
-            _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-                : _savedMoment != null
-                    ? _buildSavedMomentCard()
-                    : _buildInputCard(),
-          ],
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Professional header
+              GradientHeader(
+                icon: Icons.star,
+                title: 'Capture your most beautiful moment today!',
+                iconColor: AppColors.accentYellow,
+              ),
+              const SizedBox(height: 16),
+              // Best Moment card
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+                  : _savedMoment != null
+                      ? _buildSavedMomentCard()
+                      : _buildInputCard(),
+            ],
+          ),
         ),
       ),
     );

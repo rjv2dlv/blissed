@@ -1,0 +1,10 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/rajeev/Documents/Other_Drive/SideHustles/Blissed/blissed_workspace/build/ios/Release-iphoneos/flutter_native_timezone/flutter_native_timezone.framework/flutter_native_timezone'
+relocations:
+  - { offset: 0x4FD5, size: 0x8, addend: 0x0, symName: _flutter_native_timezoneVersionString, symObjAddr: 0x0, symBinAddr: 0x4380, symSize: 0x0 }
+  - { offset: 0x5009, size: 0x8, addend: 0x0, symName: _flutter_native_timezoneVersionNumber, symObjAddr: 0x38, symBinAddr: 0x43B8, symSize: 0x0 }
+  - { offset: 0x5045, size: 0x8, addend: 0x0, symName: '+[FlutterNativeTimezonePlugin registerWithRegistrar:]', symObjAddr: 0x0, symBinAddr: 0x4000, symSize: 0xA4 }
+  - { offset: 0x5062, size: 0x8, addend: 0x0, symName: '+[FlutterNativeTimezonePlugin registerWithRegistrar:]', symObjAddr: 0x0, symBinAddr: 0x4000, symSize: 0xA4 }
+  - { offset: 0x50BB, size: 0x8, addend: 0x0, symName: '-[FlutterNativeTimezonePlugin handleMethodCall:result:]', symObjAddr: 0xA4, symBinAddr: 0x40A4, symSize: 0x140 }
+...
