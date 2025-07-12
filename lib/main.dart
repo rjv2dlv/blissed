@@ -13,23 +13,28 @@ import 'utils/notification_service.dart';
 import 'dart:async';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  
   // Global error handler for Flutter framework errors
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
+  //FlutterError.onError = (FlutterErrorDetails details) {
+  //  FlutterError.presentError(details);
     // TODO: Send error details to a crash reporting service
-    print('FlutterError:');
-    print(details.exceptionAsString());
-    print(details.stack);
-  };
+  //  print('FlutterError:');
+  //  print(details.exceptionAsString());
+  //  print(details.stack);
+  //};
+
   // Global error handler for all uncaught Dart errors
   runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp();
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
     await NotificationService.initialize();
     runApp(const MyApp());
   }, (error, stackTrace) {
     // TODO: Send error and stackTrace to a crash reporting service
     print('Uncaught Dart error: $error');
     print(stackTrace);
+    FirebaseCrashlytics.instance.recordError(error, stack);
   });
 }
 
@@ -264,3 +269,8 @@ class _MainNavigationState extends State<MainNavigation> {
     return Icon(icon, color: selectedColor, size: 34);
   }
 }
+
+ElevatedButton(
+  onPressed: () => throw Exception('Test Crash'),
+  child: Text('Crash!'),
+)
