@@ -7,6 +7,7 @@ import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/notification_service.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class ReminderSettingsScreen extends StatefulWidget {
   @override

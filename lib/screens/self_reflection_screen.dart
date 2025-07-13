@@ -27,6 +27,40 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   List<String> _todayAnswers = [];
   String? _lastLoadedDate;
 
+  // Comprehensive suggestion lists for each question
+  final List<String> _identitySuggestions = [
+    'Focused Warrior', 'Calm Leader', 'Energetic Creator', 'Go-Getter Spirit',
+    'Mindful Observer', 'Bold Achiever', 'Peaceful Force', 'Dynamic Dreamer',
+    'Steady Climber', 'Bright Beacon', 'Gentle Power', 'Unstoppable Force',
+    'Centered Guide', 'Passionate Builder', 'Wise Explorer', 'Radiant Light',
+    'Determined Pathfinder', 'Serene Strength', 'Vibrant Soul', 'Grounded Visionary',
+    'Confident Pioneer', 'Balanced Master', 'Inspiring Catalyst', 'Authentic Champion'
+  ];
+
+  final List<String> _connectionSuggestions = [
+    'With Deep Presence', 'Through Active Listening', 'With Genuine Curiosity', 'Through Warm Empathy',
+    'With Calm Confidence', 'Through Encouraging Words', 'With Patient Understanding', 'Through Authentic Interest',
+    'With Supportive Energy', 'Through Mindful Attention', 'With Compassionate Heart', 'Through Inspiring Presence',
+    'With Open Mind', 'Through Gentle Guidance', 'With Positive Energy', 'Through Sincere Care',
+    'With Focused Attention', 'Through Encouraging Spirit', 'With Peaceful Strength', 'Through Loving Kindness'
+  ];
+
+  final List<String> _amazingDaySuggestions = [
+    'Focus on One Priority', 'Complete One Major Task', 'Learn Something New', 'Help Someone Today',
+    'Practice Deep Gratitude', 'Take One Bold Action', 'Create Something Meaningful', 'Connect with a Loved One',
+    'Move My Body Mindfully', 'Read Something Inspiring', 'Write My Thoughts Down', 'Meditate for Clarity',
+    'Finish What I Started', 'Take a Calculated Risk', 'Celebrate Small Wins', 'Plan Tomorrow Today',
+    'Express My Creativity', 'Listen to My Intuition', 'Step Out of Comfort Zone', 'Practice Self-Care'
+  ];
+
+  final List<String> _showUpSuggestions = [
+    'Focused & Present', 'Calm & Confident', 'Energetic & Determined', 'Mindful & Grounded',
+    'Bold & Authentic', 'Patient & Persistent', 'Joyful & Grateful', 'Steady & Reliable',
+    'Passionate & Driven', 'Peaceful & Centered', 'Courageous & Strong', 'Gentle & Powerful',
+    'Clear & Intentional', 'Warm & Welcoming', 'Dynamic & Inspiring', 'Balanced & Harmonious',
+    'Enthusiastic & Motivated', 'Compassionate & Understanding', 'Authentic & True', 'Radiant & Bright'
+  ];
+
   final List<Map<String, dynamic>> _questions = [
     {
       'question': 'Who do you want to be today?',
@@ -197,7 +231,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
                 color: AppColors.primaryBlue.withOpacity(0.7),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
               controller: controller,
               style: GoogleFonts.nunito(fontSize: 16, color: AppColors.primaryBlue),
@@ -210,12 +244,61 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.1)),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               ),
               validator: (value) {
                 print('Validating: $value');
                 return value == null || value.isEmpty ? 'Please answer' : null;
               },
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.teal, AppColors.teal.withOpacity(0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.teal.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _generateSuggestion,
+                    borderRadius: BorderRadius.circular(25),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Suggest Me',
+                            style: GoogleFonts.nunito(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -264,6 +347,43 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       if (key.startsWith('self_reflection_')) {
         print('Reflection key: $key, value: ${prefs.getStringList(key)}');
       }
+    }
+  }
+
+  // Get suggestions for the current question
+  List<String> _getSuggestionsForCurrentQuestion() {
+    switch (_currentCard) {
+      case 0:
+        return _identitySuggestions;
+      case 1:
+        return _connectionSuggestions;
+      case 2:
+        return _amazingDaySuggestions;
+      case 3:
+        return _showUpSuggestions;
+      default:
+        return [];
+    }
+  }
+
+  // Generate a random suggestion
+  void _generateSuggestion() {
+    final suggestions = _getSuggestionsForCurrentQuestion();
+    if (suggestions.isNotEmpty) {
+      final random = Random();
+      final suggestion = suggestions[random.nextInt(suggestions.length)];
+      _controllers[_currentCard].text = suggestion;
+      
+      // Show a snackbar with the suggestion
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✨ $suggestion'),
+          backgroundColor: AppColors.teal,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
     }
   }
 

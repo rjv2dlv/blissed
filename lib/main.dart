@@ -15,6 +15,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 void main() async {
+  // Ensure Flutter is initialized first
+  WidgetsFlutterBinding.ensureInitialized();
   
   // Global error handler for Flutter framework errors
   //FlutterError.onError = (FlutterErrorDetails details) {
@@ -26,38 +28,53 @@ void main() async {
   //};
 
   // Global error handler for all uncaught Dart errors
+
   runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp();
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
-    await NotificationService.initialize();
+    print('Initializing');
+    
+    // Initialize Firebase first
+    print('Initializing Firebase');
+    try {
+      await Firebase.initializeApp();
+      print('Firebase initialized');
+    } catch (e) {
+      print('Firebase initialization failed: $e');
+      // Continue without Firebase if it fails
+    }
+
+    // Initialize Crashlytics after Firebase
+    try {
+      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+      print('Crashlytics initialized');
+    } catch (e) {
+      print('Crashlytics setup failed: $e');
+      // Continue without Crashlytics if it fails
+    }
+    
+    // Initialize other services last
+    try {
+      await NotificationService.initialize();
+      print('Notifications initialized');
+    } catch (e) {
+      print('Notification service initialization failed: $e');
+      // Continue without notifications if it fails
+    }
+
+    print('All services initialized, starting app');
     runApp(const MyApp());
   }, (error, stackTrace) {
     // TODO: Send error and stackTrace to a crash reporting service
     print('Uncaught Dart error: $error');
     print(stackTrace);
-    FirebaseCrashlytics.instance.recordError(error, stackTrace);
+    try {
+      FirebaseCrashlytics.instance.recordError(error, stackTrace);
+    } catch (e) {
+      print('Failed to record error to Crashlytics: $e');
+    }
   });
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: ElevatedButton(
-            onPressed: () => throw Exception('Test Crash'),
-            child: Text('Crash!'),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/*class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
@@ -136,7 +153,7 @@ class MyApp extends StatelessWidget {
       home: const MainNavigation(),
     );
   }
-}*/
+}
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -170,6 +187,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    print('Building MainNavigation');
     print('SelfReflectionScreen build called');
     final titles = [
       'Self-Reflection',
