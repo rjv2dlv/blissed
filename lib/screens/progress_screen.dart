@@ -330,30 +330,119 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Widget _buildContributionGrid() {
-    // 26 weeks x 7 days = 182 days
+    // Calculate the last 6 months including the current month
     final now = DateTime.now();
-    final days = List.generate(26 * 7, (i) => now.subtract(Duration(days: 26 * 7 - 1 - i)));
+    
+    // Calculate 5 months ago (to get 6 months total including current month)
+    DateTime fiveMonthsAgo;
+    if (now.month <= 5) {
+      // If current month is 1-5, go back to previous year
+      fiveMonthsAgo = DateTime(now.year - 1, now.month + 7, now.day);
+    } else {
+      // If current month is 6-12, stay in same year
+      fiveMonthsAgo = DateTime(now.year, now.month - 5, now.day);
+    }
+    
+    // Calculate days between five months ago and today
+    final daysDifference = now.difference(fiveMonthsAgo).inDays;
+    
+    // Generate days from five months ago to today
+    final days = List.generate(daysDifference + 1, (i) => fiveMonthsAgo.add(Duration(days: i)));
+    
     // Group by week (columns)
-    final weeks = List.generate(26, (w) => days.skip(w * 7).take(7).toList());
-    // Month labels
-    final monthLabels = <int, String>{};
-    final shownMonths = <String>{};
-    for (int w = 0; w < weeks.length; w++) {
-      final firstDay = weeks[w].first;
-      final monthKey = '${firstDay.year}_${firstDay.month}';
-      
-      // Show month label only for the first occurrence of each month
-      if (!shownMonths.contains(monthKey)) {
-        monthLabels[w] = _monthAbbr(firstDay.month);
-        shownMonths.add(monthKey);
+    final weeks = <List<DateTime>>[];
+    for (int i = 0; i < days.length; i += 7) {
+      if (i + 7 <= days.length) {
+        weeks.add(days.skip(i).take(7).toList());
+      } else {
+        // Handle the last partial week
+        weeks.add(days.skip(i).toList());
       }
     }
+    
+    // Month labels - show the last 6 months including current month
+    final monthLabels = <int, String>{};
+    final shownMonths = <String>{};
+    
+    // Get all months in the 6-month range (including current month)
+    final monthsInRange = <String>{};
+    DateTime currentMonth = DateTime(fiveMonthsAgo.year, fiveMonthsAgo.month, 1);
+    for (int i = 0; i < 6; i++) {
+      monthsInRange.add('${currentMonth.year}_${currentMonth.month}');
+      currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
+    }
+    
+    // Find the column index for the first day of each month
+    final monthLabelPositions = <int, String>{};
+    for (int w = 0; w < weeks.length; w++) {
+      final week = weeks[w];
+      for (int d = 0; d < week.length; d++) {
+        final day = week[d];
+        final monthKey = '${day.year}_${day.month}';
+        if (!shownMonths.contains(monthKey) && monthsInRange.contains(monthKey) && day.day == 1) {
+          // The column index in the grid is w (week) * 7 + d (day in week)
+          final colIndex = w;
+          monthLabelPositions[colIndex * 7 + d] = _monthAbbr(day.month);
+          shownMonths.add(monthKey);
+        }
+      }
+    }
+    
     // Weekday labels (Mon, Wed, Fri)
     final weekdayLabels = [1, 3, 5]; // Monday, Wednesday, Friday
     
     // Calculate max points for color scaling
     final maxPoints = _pointsHistory.values.isEmpty ? 1 : _pointsHistory.values.reduce((a, b) => a > b ? a : b);
     
+    // Calculate the week index for the first day of each of the last 6 months
+    final monthStartWeeks = <int>[];
+    for (int i = 0; i < 6; i++) {
+      final monthDate = DateTime(fiveMonthsAgo.year, fiveMonthsAgo.month + i, 1);
+      // Find the week index where this month starts
+      int weekIdx = weeks.indexWhere((week) => week.any((d) => d.year == monthDate.year && d.month == monthDate.month && d.day == 1));
+      if (weekIdx == -1) weekIdx = 0; // fallback if not found
+      monthStartWeeks.add(weekIdx);
+    }
+
+    // Always show 6 evenly spaced month labels
+    final totalWeeks = weeks.length;
+    // Get the last 6 months (including current month)
+    List<String> monthLabelsList = [];
+    DateTime firstMonth;
+    if (now.month <= 5) {
+      firstMonth = DateTime(now.year - 1, now.month + 7, 1);
+    } else {
+      firstMonth = DateTime(now.year, now.month - 5, 1);
+    }
+    for (int i = 0; i < 6; i++) {
+      final monthDate = DateTime(firstMonth.year, firstMonth.month + i, 1);
+      monthLabelsList.add(_monthAbbr(monthDate.month));
+    }
+    // Calculate label positions
+    final labelPositions = <int>[];
+    if (totalWeeks > 1) {
+      final step = (totalWeeks - 1) / 5;
+      for (int i = 0; i < 6; i++) {
+        labelPositions.add((i * step).round());
+      }
+    } else {
+      labelPositions.addAll(List.filled(6, 0));
+    }
+    // Build the month label row
+    final monthLabelRow = <Widget>[];
+    for (int w = 0; w < totalWeeks; w++) {
+      final labelIdx = labelPositions.indexOf(w);
+      if (labelIdx != -1) {
+        monthLabelRow.add(Container(
+          width: 20,
+          alignment: Alignment.centerLeft,
+          child: Text(monthLabelsList[labelIdx], style: GoogleFonts.nunito(fontSize: 10, color: AppColors.primaryBlue)),
+        ));
+      } else {
+        monthLabelRow.add(Container(width: 20));
+      }
+    }
+
     return EuphoricCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,17 +458,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 // Month labels
                 Row(
                   children: [
-                    const SizedBox(width: 28), // space for weekday labels
-                    ...List.generate(weeks.length, (w) {
-                      final label = monthLabels[w];
-                      return Container(
-                        width: 20,
-                        alignment: Alignment.centerLeft,
-                        child: label != null
-                            ? Text(label, style: GoogleFonts.nunito(fontSize: 10, color: AppColors.primaryBlue))
-                            : const SizedBox.shrink(),
-                      );
-                    }),
+                    const SizedBox(width: 20), // space for weekday labels
+                    ...monthLabelRow,
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -401,41 +481,42 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         }
                       }),
                     ),
-                    // The grid
-                    ...weeks.map((week) => Column(
+                    // The grid (flattened for alignment)
+                    Column(
                       children: List.generate(7, (d) {
-                        final date = week[d];
-                        final dateKey = AppDateUtils.getDateKey(date);
-                        final points = _pointsHistory[dateKey] ?? 0;
-                        final now = DateTime.now();
-                        final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
-                        
-                        // Color based on points: higher points = darker color
-                        Color color;
-                        if (points == 0) {
-                          color = Colors.grey[300]!; // Light grey for no points
-                        } else if (points == 1) {
-                          color = Colors.green[200]!; // Light green for 1 point
-                        } else if (points == 2) {
-                          color = Colors.green[400]!; // Medium green for 2 points
-                        } else if (points == 3) {
-                          color = Colors.green[600]!; // Dark green for 3 points
-                        } else {
-                          color = Colors.green[800]!; // Darkest green for 4+ points
-                        }
-                        
-                        // Highlight today with yellow border
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
-                          width: 13,
-                          height: 13,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
+                        return Row(
+                          children: List.generate(weeks.length, (w) {
+                            if (d >= weeks[w].length) {
+                              return SizedBox(height: 15, width: 13);
+                            }
+                            final date = weeks[w][d];
+                            final dateKey = AppDateUtils.getDateKey(date);
+                            final points = _pointsHistory[dateKey] ?? 0;
+                            Color color;
+                            if (points == 0) {
+                              color = Colors.grey[300]!;
+                            } else if (points == 1 || points == 2) {
+                              color = Colors.green[200]!;
+                            } else if (points == 3 || points == 4) {
+                              color = Colors.green[400]!;
+                            } else if (points == 5 || points == 6) {
+                              color = Colors.green[600]!;
+                            } else {
+                              color = Colors.green[800]!;
+                            }
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
+                              width: 13,
+                              height: 13,
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            );
+                          }),
                         );
                       }),
-                    )),
+                    ),
                   ],
                 ),
               ],
@@ -453,7 +534,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               ),
               Row(
                 children: [
-                  Container(width: 13, height: 13, color: const Color(0xFF151b23)),
+                  Container(width: 13, height: 13, color: Colors.grey[300]),
                   Container(width: 13, height: 13, color: Colors.green[200]),
                   Container(width: 13, height: 13, color: Colors.green[400]),
                   Container(width: 13, height: 13, color: Colors.green[600]),
@@ -461,7 +542,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   const SizedBox(width: 10),
                 ],
               ),
-              Text('4+ pts', style: GoogleFonts.nunito(fontSize: 12, color: AppColors.primaryBlue)),
+              Text('6+ pts', style: GoogleFonts.nunito(fontSize: 12, color: AppColors.primaryBlue)),
             ],
           ),
         ],
