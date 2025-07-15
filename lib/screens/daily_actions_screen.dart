@@ -113,10 +113,34 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        GradientHeader(
-                          icon: Icons.check_circle_outline,
-                          title: 'Plan and conquer your day with purposeful actions!',
-                          iconColor: AppColors.accentYellow,
+                        // Modern blue pill banner
+                        Container(
+                          margin: EdgeInsets.only(bottom: 8),
+                          padding: EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF00B4FF), Color(0xFF1976D2)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle_outline, color: Colors.white, size: 28),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Plan and conquer your day with purposeful actions!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 24),
                         EuphoricCardWithBorder(
@@ -128,7 +152,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                               children: [
                                 Text(
                                   'Add your actions for today:',
-                                  style: AppTextStyles.question,
+                                  style: AppTextStyles.question.copyWith(color: Color(0xFF00B4FF)),
                                 ),
                                 const SizedBox(height: 12),
                                 Column(
@@ -144,11 +168,15 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                                         hintStyle: AppTextStyles.description.copyWith(color: AppColors.textPrimary.withOpacity(0.5)),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.3)),
+                                          borderSide: BorderSide(color: Color(0xFF00B4FF).withOpacity(0.5)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Color(0xFF00B4FF).withOpacity(0.5)),
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide(color: AppColors.teal, width: 2),
+                                          borderSide: BorderSide(color: Color(0xFF00B4FF), width: 2),
                                         ),
                                         filled: true,
                                         fillColor: Colors.white.withOpacity(0.8),
@@ -157,10 +185,42 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                                       onSubmitted: (_) => _addAction(),
                                     ),
                                     const SizedBox(height: 14),
-                                    GradientButton(
-                                      onPressed: _addAction,
-                                      text: 'Add',
-                                      height: 48,
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        style: ButtonStyle(
+                                          padding: MaterialStateProperty.all(EdgeInsets.zero),
+                                          backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                          elevation: MaterialStateProperty.all(0),
+                                          shape: MaterialStateProperty.all(
+                                            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                          ),
+                                          shadowColor: MaterialStateProperty.all(Colors.transparent),
+                                        ),
+                                        onPressed: _addAction,
+                                        child: Ink(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [Color(0xFF00B4FF), Color(0xFF1976D2)],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Container(
+                                            alignment: Alignment.center,
+                                            height: 48,
+                                            child: Text(
+                                              'Add',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -181,7 +241,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                                 final originalIndex = _actions.indexOf(action);
                                 Color? borderColor;
                                 if (action['status'] == 'completed') {
-                                  borderColor = Colors.green;
+                                  borderColor = const Color(0xFF00B4FF); // Blueish accent for completed
                                 } else if (action['status'] == 'rejected') {
                                   borderColor = Colors.red;
                                 }
@@ -208,11 +268,11 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                                             onTap: () => _markAction(originalIndex, 'completed'),
                                             child: Container(
                                               decoration: BoxDecoration(
-                                                color: Colors.green.withOpacity(0.15),
+                                                color: Color(0xFF00B4FF).withOpacity(0.15),
                                                 shape: BoxShape.circle,
                                               ),
                                               padding: const EdgeInsets.all(6),
-                                              child: Icon(Icons.check, color: Colors.green, size: 22),
+                                              child: Icon(Icons.check, color: Color(0xFF00B4FF), size: 22),
                                             ),
                                           ),
                                           const SizedBox(width: 8),
@@ -231,7 +291,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                                         ],
                                       ),
                                     if (action['status'] == 'completed')
-                                      const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                                      const Icon(Icons.check_circle, color: Color(0xFF00B4FF), size: 28),
                                     if (action['status'] == 'rejected')
                                       const Icon(Icons.cancel, color: Colors.red, size: 28),
                                   ],

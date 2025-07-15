@@ -64,7 +64,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       // Reflections
       final reflectionKey = 'self_reflection_$dateKey';
       final reflectionData = prefs.getStringList(reflectionKey);
-      if (reflectionData != null && reflectionData.length == 4) {
+      if (reflectionData != null && reflectionData.isNotEmpty) {
         totalReflections++;
         activityCount++;
         if (i < 21) {
@@ -130,6 +130,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
       contributionMap[dateKey] = activityCount;
     }
 
+    print('printing the testing now..');
+    final allKeys = prefs.getKeys();
+    for (final key in allKeys) {
+      if (key.startsWith('self_reflection_')) {
+        print('Reflection key: $key, value: ${prefs.getStringList(key)}');
+      }
+    }
+
     setState(() {
       _stats = {
         'totalReflections': totalReflections,
@@ -166,7 +174,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('History', style: GoogleFonts.nunito(fontWeight: FontWeight.bold)),
+        backgroundColor: Color(0xFF23272F),
+        elevation: 4,
+        title: Text(
+          'History',
+          style: GoogleFonts.nunito(
+            color: Color(0xFF00B4FF),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            letterSpacing: 1.2,
+          ),
+        ),
         centerTitle: true,
       ),
       body: BackgroundImage(
@@ -181,7 +199,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     GradientHeader(
                       icon: Icons.history,
                       title: 'Reflect on Your Achievements',
-                      iconColor: AppColors.accentYellow,
+                      iconColor: Colors.white,
+                      iconSize: 25,
                     ),
                     const SizedBox(height: 16),
                     Padding(
@@ -192,11 +211,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: TabBar(
-                          labelColor: AppColors.primaryBlue,
+                          labelColor: Color(0xFF00B4FF),
                           unselectedLabelColor: AppColors.primaryBlue.withOpacity(0.5),
                           labelStyle: GoogleFonts.nunito(fontWeight: FontWeight.bold),
                           indicator: BoxDecoration(
-                            color: AppColors.accentYellow.withOpacity(0.25),
+                            color: Color(0xFF00B4FF).withOpacity(0.18),
                             borderRadius: BorderRadius.circular(24),
                           ),
                           indicatorWeight: 0,
@@ -222,7 +241,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   itemBuilder: (context, idx) {
                                     final reflection = _recentReflections[idx];
                                     return EuphoricCardWithBorder(
-                                      borderColor: AppColors.primaryBlue,
+                                      borderColor: Color(0xFF00B4FF),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(
@@ -250,7 +269,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   itemBuilder: (context, idx) {
                                     final action = _recentActions[idx];
                                     return EuphoricCardWithBorder(
-                                      borderColor: AppColors.success,
+                                      borderColor: Color(0xFF00B4FF),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(
@@ -260,7 +279,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
                                                 Text(AppDateUtils.formatDate(action['date']), style: GoogleFonts.nunito(fontWeight: FontWeight.bold)),
-                                                Text('${action['completed']}/${action['total']}', style: GoogleFonts.nunito(color: AppColors.success)),
+                                                Text('${action['completed']}/${action['total']}', style: GoogleFonts.nunito(color: Color(0xFF00B4FF))),
                                               ],
                                             ),
                                             const SizedBox(height: 8),
@@ -272,7 +291,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                               switch (a['status']) {
                                                 case 'completed':
                                                   statusIcon = Icons.check_circle;
-                                                  statusColor = AppColors.success;
+                                                  statusColor = Color(0xFF00B4FF);
                                                   statusText = 'Completed';
                                                   break;
                                                 case 'rejected':
@@ -313,7 +332,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   itemBuilder: (context, idx) {
                                     final moment = _recentBestMoments[idx];
                                     return EuphoricCardWithBorder(
-                                      borderColor: AppColors.accentYellow,
+                                      borderColor: Color(0xFF00B4FF),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(
@@ -338,7 +357,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   itemBuilder: (context, idx) {
                                     final gratitude = _recentGratitude[idx];
                                     return EuphoricCardWithBorder(
-                                      borderColor: AppColors.teal,
+                                      borderColor: Color(0xFF00B4FF),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(

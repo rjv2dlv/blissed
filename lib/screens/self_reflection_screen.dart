@@ -153,7 +153,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
 
   String _todayKey() {
     final now = DateTime.now();
-    return AppDateUtils.getDateKey(now);
+    return 'self_reflection_${AppDateUtils.getDateKey(now)}';
   }
 
   void _resetAnswers() {
@@ -220,7 +220,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
               style: GoogleFonts.nunito(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primaryBlue,
+                color: Color(0xFF00B4FF),
               ),
             ),
             const SizedBox(height: 4),
@@ -242,7 +242,11 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
                 fillColor: Colors.transparent,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.1)),
+                  borderSide: BorderSide(color: Color(0xFF00B4FF).withOpacity(0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF00B4FF), width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               ),
@@ -256,14 +260,14 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.teal, AppColors.teal.withOpacity(0.8)],
+                    colors: [Color(0xFF00B4FF), Color(0xFF1976D2)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.teal.withOpacity(0.3),
+                      color: Color(0xFF00B4FF).withOpacity(0.18),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -321,7 +325,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
                 style: GoogleFonts.nunito(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primaryBlue,
+                  color: Color(0xFF00B4FF),
                 ),
               ),
               const SizedBox(height: 8),
@@ -378,7 +382,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('✨ $suggestion'),
-          backgroundColor: AppColors.teal,
+          backgroundColor: Color(0xFF00B4FF),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -390,91 +394,145 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   @override
   Widget build(BuildContext context) {
     return BackgroundImage(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            //const SizedBox(height: 2),
-            GradientHeader(
-              icon: Icons.auto_awesome,
-              title: 'Reflect and set your intention for today!',
-              iconColor: AppColors.accentYellow,
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _submitted
-                ? SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 150),
-                    child: Column(
-                      children: [
-                        _buildSummaryCard(),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _resetAnswers,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            elevation: 0,
-                            padding: EdgeInsets.zero,
-                          ),
-                          child: GradientButton(
-                            onPressed: _resetAnswers,
-                            text: 'Reset',
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        backgroundColor: Colors.transparent,
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Modern blue pill banner
+                Container(
+                  margin: EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF00B4FF), Color(0xFF1976D2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Reflect and set your intention for today!',
+                          style: GoogleFonts.nunito(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 150),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          _buildQuestionCard(
-                            _questions[_currentCard]['question'],
-                            _questions[_currentCard]['desc'],
-                            _controllers[_currentCard],
-                            List<String>.from(_questions[_currentCard]['examples']),
-                          ),
-                          const SizedBox(height: 30),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              if (_currentCard > 0)
-                                Expanded(
-                                  child: GradientButton(
-                                    onPressed: _prevCard,
-                                    text: 'Back',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: _submitted
+                    ? SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 150),
+                        child: Column(
+                          children: [
+                            _buildSummaryCard(),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ButtonStyle(
+                                  padding: MaterialStateProperty.all(EdgeInsets.zero),
+                                  backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                  elevation: MaterialStateProperty.all(0),
+                                  shape: MaterialStateProperty.all(
+                                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  ),
+                                  shadowColor: MaterialStateProperty.all(Colors.transparent),
+                                ),
+                                onPressed: _resetAnswers,
+                                child: Ink(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Color(0xFF00B4FF), Color(0xFF1976D2)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    height: 48,
+                                    child: Text(
+                                      'Reset',
+                                      style: GoogleFonts.nunito(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              if (_currentCard > 0) const SizedBox(width: 16),
-                              Expanded(
-                                child: _currentCard == _questions.length - 1
-                                    ? GradientButton(
-                                        onPressed: () {
-                                          print('About to call _saveTodayAnswers');
-                                          if (_formKey.currentState!.validate()) {
-                                            _saveTodayAnswers();
-                                          }
-                                        },
-                                        text: 'Submit',
-                                      )
-                                    : GradientButton(
-                                        onPressed: _nextCard,
-                                        text: 'Next',
-                                      ),
                               ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 150),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              _buildQuestionCard(
+                                _questions[_currentCard]['question'],
+                                _questions[_currentCard]['desc'],
+                                _controllers[_currentCard],
+                                List<String>.from(_questions[_currentCard]['examples']),
+                              ),
+                              const SizedBox(height: 30),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  if (_currentCard > 0)
+                                    Expanded(
+                                      child: GradientButton(
+                                        onPressed: _prevCard,
+                                        text: 'Back',
+                                      ),
+                                    ),
+                                  if (_currentCard > 0) const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _currentCard == _questions.length - 1
+                                        ? GradientButton(
+                                            onPressed: () {
+                                              print('About to call _saveTodayAnswers');
+                                              if (_formKey.currentState!.validate()) {
+                                                _saveTodayAnswers();
+                                              }
+                                            },
+                                            text: 'Submit',
+                                          )
+                                        : GradientButton(
+                                            onPressed: _nextCard,
+                                            text: 'Next',
+                                          ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
                             ],
                           ),
-                          const SizedBox(height: 18),
-                        ],
-                      ),
+                        ),
                     ),
-                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -74,12 +74,12 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.primaryBlue,
+        backgroundColor: Color(0xFF23272F),
         elevation: 4,
         title: Text(
           'Reminders',
           style: GoogleFonts.nunito(
-            color: Colors.white,
+            color: Color(0xFF00B4FF),
             fontWeight: FontWeight.bold,
             fontSize: 22,
             letterSpacing: 1.2,
@@ -98,7 +98,8 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                     GradientHeader(
                       icon: Icons.alarm,
                       title: 'Set daily reminders to reflect and take action!',
-                      iconColor: AppColors.accentYellow,
+                      iconColor: Colors.white,
+                      iconSize: 28,
                     ),
                     const SizedBox(height: 24),
                     Expanded(
@@ -115,7 +116,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
                               itemBuilder: (context, index) {
                                 final t = _reminders[index];
                                 return EuphoricCardWithBorder(
-                                  borderColor: AppColors.teal,
+                                  borderColor: Color(0xFF00B4FF),
                                   child: ListTile(
                                     leading: Icon(Icons.alarm, color: AppColors.primaryBlue),
                                     title: Text(

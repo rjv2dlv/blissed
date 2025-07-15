@@ -13,6 +13,7 @@ import 'utils/notification_service.dart';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   // Ensure Flutter is initialized first
@@ -37,6 +38,8 @@ void main() async {
     try {
       await Firebase.initializeApp();
       print('Firebase initialized');
+      FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+      FirebaseCrashlytics.instance.setCustomKey("build_mode", kReleaseMode ? "release" : "debug");
     } catch (e) {
       print('Firebase initialization failed: $e');
       // Continue without Firebase if it fails
@@ -98,7 +101,7 @@ class MyApp extends StatelessWidget {
         colorScheme: colorScheme,
         scaffoldBackgroundColor: AppColors.background,
         appBarTheme: AppBarTheme(
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: Color(0xFF23272F),
           foregroundColor: Colors.white,
           elevation: 4,
           titleTextStyle: GoogleFonts.nunito(
@@ -111,9 +114,9 @@ class MyApp extends StatelessWidget {
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: AppColors.card,
-          selectedItemColor: AppColors.teal,
+          selectedItemColor: AppColors.primaryBlue,
           unselectedItemColor: AppColors.primaryBlue.withOpacity(0.5),
-          selectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.bold, color: AppColors.teal),
+          selectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
           unselectedLabelStyle: GoogleFonts.nunito(color: AppColors.primaryBlue.withOpacity(0.7)),
           elevation: 12,
           type: BottomNavigationBarType.fixed,
@@ -199,7 +202,7 @@ class _MainNavigationState extends State<MainNavigation> {
     return Scaffold(
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: AppColors.primaryBlue,
+        backgroundColor: Color(0xFF23272F),
         elevation: 4,
         title: Stack(
           alignment: Alignment.center,
@@ -208,7 +211,7 @@ class _MainNavigationState extends State<MainNavigation> {
               child: Text(
                 titles[_selectedIndex],
                 style: GoogleFonts.nunito(
-                  color: Colors.white,
+                  color: Color(0xFF00B4FF),
                   fontWeight: FontWeight.bold,
                   fontSize: 22,
                   letterSpacing: 1.2,
@@ -256,41 +259,41 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       bottomNavigationBar: Container(
         width: double.infinity,
-        color: AppColors.primaryBlue,
+        color: const Color(0xFF23272F),
         child: BottomNavigationBar(
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: const Color(0xFF23272F),
           type: BottomNavigationBarType.fixed,
           items: [
             BottomNavigationBarItem(
-              icon: _gradientIcon(Icons.auto_awesome, _selectedIndex == 0, selectedColor: AppColors.teal),
+              icon: _gradientIcon(Icons.auto_awesome_outlined, _selectedIndex == 0, selectedColor: Color(0xFF00B4FF)),
               label: 'Reflection',
             ),
             BottomNavigationBarItem(
-              icon: _gradientIcon(Icons.check_circle_rounded, _selectedIndex == 1, selectedColor: AppColors.teal),
+              icon: _gradientIcon(Icons.check_circle_outline, _selectedIndex == 1, selectedColor: Color(0xFF00B4FF)),
               label: 'Daily Actions',
             ),
             BottomNavigationBarItem(
-              icon: _gradientIcon(Icons.star, _selectedIndex == 2, selectedColor: AppColors.teal),
+              icon: _gradientIcon(Icons.star_outline, _selectedIndex == 2, selectedColor: Color(0xFF00B4FF)),
               label: 'Best Moment',
             ),
             BottomNavigationBarItem(
-              icon: _gradientIcon(Icons.favorite, _selectedIndex == 3, selectedColor: AppColors.teal),
+              icon: _gradientIcon(Icons.favorite_border, _selectedIndex == 3, selectedColor: Color(0xFF00B4FF)),
               label: 'Gratitude',
             ),
             BottomNavigationBarItem(
-              icon: _gradientIcon(Icons.timeline_rounded, _selectedIndex == 4, selectedColor: AppColors.teal),
+              icon: _gradientIcon(Icons.insights_outlined, _selectedIndex == 4, selectedColor: Color(0xFF00B4FF)),
               label: 'Progress',
             ),
           ],
           currentIndex: _selectedIndex,
-          selectedItemColor: AppColors.teal,
+          selectedItemColor: Color(0xFF00B4FF),
           unselectedItemColor: Colors.white,
           showUnselectedLabels: true,
           elevation: 0,
           onTap: _onItemTapped,
           selectedFontSize: 16,
           unselectedFontSize: 14,
-          selectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.teal),
+          selectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF00B4FF)),
           unselectedLabelStyle: GoogleFonts.nunito(fontWeight: FontWeight.normal, fontSize: 14, color: Colors.white),
           landscapeLayout: BottomNavigationBarLandscapeLayout.centered,
         ),
@@ -303,6 +306,6 @@ class _MainNavigationState extends State<MainNavigation> {
     if (!selected) {
       return Icon(icon, color: Colors.white, size: 30);
     }
-    return Icon(icon, color: selectedColor, size: 34);
+    return Icon(icon, color: Color(0xFF00B4FF), size: 34);
   }
 }

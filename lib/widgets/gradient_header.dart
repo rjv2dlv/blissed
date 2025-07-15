@@ -29,7 +29,7 @@ class GradientHeader extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         gradient: const LinearGradient(
-          colors: [AppColors.primaryBlue, AppColors.teal],
+          colors: [Color(0xFF00B4FF), Color(0xFF1976D2)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

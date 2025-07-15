@@ -70,27 +70,31 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
   @override
   Widget build(BuildContext context) {
     return BackgroundImage(
-      child: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Professional header
-              GradientHeader(
-                icon: Icons.star,
-                title: 'Capture your most beautiful moment today!',
-                iconColor: AppColors.accentYellow,
-              ),
-              const SizedBox(height: 16),
-              // Best Moment card
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-                  : _savedMoment != null
-                      ? _buildSavedMomentCard()
-                      : _buildInputCard(),
-            ],
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        backgroundColor: Colors.transparent,
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Professional header
+                GradientHeader(
+                  icon: Icons.star_outline,
+                  title: 'Capture your most beautiful moment today!',
+                  iconColor: Colors.white,
+                ),
+                const SizedBox(height: 16),
+                // Best Moment card
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+                    : _savedMoment != null
+                        ? _buildSavedMomentCard()
+                        : _buildInputCard(),
+              ],
+            ),
           ),
         ),
       ),
@@ -104,7 +108,7 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
         children: [
           Text(
             'What was your best moment today?',
-            style: AppTextStyles.question,
+            style: AppTextStyles.question.copyWith(color: Color(0xFF00B4FF)),
           ),
           const SizedBox(height: 8),
           Text(
@@ -122,11 +126,11 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
               hintStyle: AppTextStyles.description.copyWith(color: AppColors.textPrimary.withOpacity(0.5)),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.3)),
+                borderSide: BorderSide(color: Color(0xFF00B4FF).withOpacity(0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.teal, width: 2),
+                borderSide: BorderSide(color: Color(0xFF00B4FF), width: 2),
               ),
               filled: true,
               fillColor: Colors.white.withOpacity(0.8),
@@ -151,11 +155,11 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.star, color: AppColors.accentYellow, size: 28),
+              //Icon(Icons.star, color: AppColors.accentYellow, size: 28),
               const SizedBox(width: 8),
               Text(
                 'Your Best Moment Today',
-                style: AppTextStyles.question,
+                style: AppTextStyles.question.copyWith(color: Color(0xFF00B4FF)),
               ),
             ],
           ),

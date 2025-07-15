@@ -11,14 +11,18 @@ import '../widgets/euphoric_card.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/swipeable_card_section.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:math';
 
 
 class ProgressScreen extends StatefulWidget {
+  const ProgressScreen({Key? key}) : super(key: key);
+
   @override
   State<ProgressScreen> createState() => _ProgressScreenState();
 }
 
-class _ProgressScreenState extends State<ProgressScreen> {
+class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _recentReflections = [];
   List<Map<String, dynamic>> _recentActions = [];
@@ -32,10 +36,46 @@ class _ProgressScreenState extends State<ProgressScreen> {
   int _totalBestMoments = 0;
   final ScrollController _gridScrollController = ScrollController();
 
+  // Today's stats
+  int _todayStreak = 0;
+  int _todayActions = 0;
+  int _todayActionsCompleted = 0;
+  int _todayGratitude = 0;
+  int _todayReflections = 0;
+  bool _todayBestMoment = false;
+  int _todayPoints = 0;
+
+  // Week stats
+  int _weekStreak = 0;
+  int _weekActions = 0;
+  int _weekActionsCompleted = 0;
+  int _weekGratitude = 0;
+  int _weekReflections = 0;
+  int _weekBestMoments = 0;
+  bool _weekStatsLoading = true;
+
+  // Month stats
+  int _monthStreak = 0;
+  int _monthActions = 0;
+  int _monthGratitude = 0;
+  int _monthReflections = 0;
+  int _monthBestMoments = 0;
+  bool _monthStatsLoading = true;
+
+  // Blue color palette (shared)
+  static const Color blueMain = Color(0xFF00B4FF);
+  static const Color blueLight = Color(0xFFB3E5FC);
+  static const Color blueDark = Color(0xFF1976D2);
+  static const Color blueGrey = Color(0xFF263238);
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadProgressData();
+    _loadTodayStats();
+    _loadWeekStats();
+    _loadMonthStats();
   }
 
   @override
@@ -170,453 +210,1033 @@ class _ProgressScreenState extends State<ProgressScreen> {
     });
   }
 
+  Future<void> _loadTodayStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final dateKey = '${now.year}_${now.month}_${now.day}';
+
+    // Streak (current streak)
+    _todayStreak = AppDateUtils.calculateCurrentStreak(prefs);
+
+    // Actions
+    final actionsKey = 'daily_actions_$dateKey';
+    final actionsData = prefs.getString(actionsKey);
+    if (actionsData != null) {
+      final actions = List<Map<String, dynamic>>.from(json.decode(actionsData));
+      _todayActions = actions.length;
+      _todayActionsCompleted = actions.where((a) => a['status'] == 'completed').length;
+    } else {
+      _todayActions = 0;
+      _todayActionsCompleted = 0;
+    }
+
+    // Gratitude
+    final gratitudeKey = 'gratitude_$dateKey';
+    final gratitudeData = prefs.getString(gratitudeKey);
+    if (gratitudeData != null) {
+      final gratitudeList = List<String>.from(json.decode(gratitudeData));
+      _todayGratitude = gratitudeList.length;
+    } else {
+      _todayGratitude = 0;
+    }
+
+    // Reflections
+    final reflectionKey = 'self_reflection_$dateKey';
+    final reflectionData = prefs.getStringList(reflectionKey);
+    if (reflectionData != null && reflectionData.length == 4) {
+      _todayReflections = 1;
+    } else {
+      _todayReflections = 0;
+    }
+
+    // Best Moment
+    final bestMomentKey = 'best_moment_$dateKey';
+    final bestMoment = prefs.getString(bestMomentKey);
+    _todayBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
+
+    // Points
+    final pointsMap = await PointsUtils.getPointsMap();
+    _todayPoints = pointsMap[dateKey] ?? 0;
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _loadWeekStats() async {
+    final now = DateTime.now();
+    // Start week from Sunday
+    final startOfWeek = now.subtract(Duration(days: now.weekday % 7)); // Sunday
+    final weekDays = List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+    int weekStreak = 0;
+    int weekActions = 0;
+    int weekActionsCompleted = 0;
+    int weekGratitude = 0;
+    int weekReflections = 0;
+    int weekBestMoments = 0;
+    final prefs = await SharedPreferences.getInstance();
+    for (final date in weekDays) {
+      final dateKey = AppDateUtils.getDateKey(date);
+      final hasReflection = prefs.getStringList('self_reflection_$dateKey') != null;
+      final actionsData = prefs.getString('daily_actions_$dateKey');
+      final actions = actionsData != null ? List<Map<String, dynamic>>.from(json.decode(actionsData)) : [];
+      final hasActions = actions.isNotEmpty;
+      final completedActions = actions.where((a) => a['status'] == 'completed').length;
+      final gratitudeData = prefs.getString('gratitude_$dateKey');
+      final hasGratitude = gratitudeData != null && List<String>.from(json.decode(gratitudeData)).isNotEmpty;
+      final bestMoment = prefs.getString('best_moment_$dateKey');
+      final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
+      if (hasReflection || hasActions || hasGratitude || hasBestMoment) weekStreak++;
+      if (hasActions) weekActions += actions.length;
+      weekActionsCompleted += completedActions;
+      if (hasGratitude) weekGratitude += List<String>.from(json.decode(gratitudeData!)).length;
+      if (hasReflection) weekReflections++;
+      if (hasBestMoment) weekBestMoments++;
+    }
+    setState(() {
+      _weekStreak = weekStreak;
+      _weekActions = weekActions;
+      _weekActionsCompleted = weekActionsCompleted;
+      _weekGratitude = weekGratitude;
+      _weekReflections = weekReflections;
+      _weekBestMoments = weekBestMoments;
+      _weekStatsLoading = false;
+    });
+  }
+
+  Future<void> _loadMonthStats() async {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year, now.month, 1);
+    final lastDay = DateTime(now.year, now.month + 1, 0);
+    final monthDays = List.generate(lastDay.day, (i) => DateTime(now.year, now.month, i + 1));
+    int monthStreak = 0;
+    int monthActions = 0;
+    int monthGratitude = 0;
+    int monthReflections = 0;
+    int monthBestMoments = 0;
+    final prefs = await SharedPreferences.getInstance();
+    for (final date in monthDays) {
+      final dateKey = AppDateUtils.getDateKey(date);
+      final hasReflection = prefs.getStringList('self_reflection_$dateKey') != null;
+      final actionsData = prefs.getString('daily_actions_$dateKey');
+      final hasActions = actionsData != null && List<Map<String, dynamic>>.from(json.decode(actionsData)).isNotEmpty;
+      final gratitudeData = prefs.getString('gratitude_$dateKey');
+      final hasGratitude = gratitudeData != null && List<String>.from(json.decode(gratitudeData)).isNotEmpty;
+      final bestMoment = prefs.getString('best_moment_$dateKey');
+      final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
+      if (hasReflection || hasActions || hasGratitude || hasBestMoment) monthStreak++;
+      if (hasActions) monthActions += List<Map<String, dynamic>>.from(json.decode(actionsData!)).length;
+      if (hasGratitude) monthGratitude += List<String>.from(json.decode(gratitudeData!)).length;
+      if (hasReflection) monthReflections++;
+      if (hasBestMoment) monthBestMoments++;
+    }
+    setState(() {
+      _monthStreak = monthStreak;
+      _monthActions = monthActions;
+      _monthGratitude = monthGratitude;
+      _monthReflections = monthReflections;
+      _monthBestMoments = monthBestMoments;
+      _monthStatsLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BackgroundImage(
-      child: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Header
-                  GradientHeader(
-                    icon: Icons.timeline,
-                    title: 'Track your growth and celebrate your wins!',
-                    iconColor: AppColors.accentYellow,
-                  ),
-                  const SizedBox(height: 24),
-                  // Stat List (List with Icons)
-                  _buildStatisticsSection(),
-                  const SizedBox(height: 24),
-                  // Points Trend Section
-                  _buildPointsTrendSection(),
-                  const SizedBox(height: 24),
-                  // Recent Reflections
-                  if (_recentReflections.isNotEmpty) ...[
-                    SwipeableCardSection(
-                      title: 'Recent Reflections',
-                      icon: Icons.auto_awesome,
-                      color: AppColors.primaryBlue,
-                      items: _recentReflections,
-                      itemBuilder: (context, reflection) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(AppDateUtils.formatDate(reflection['date']), 
-                               style: GoogleFonts.nunito(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          ...List.generate(reflection['answers'].length, (i) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(reflection['answers'][i], 
-                                       style: GoogleFonts.nunito(fontSize: 14)),
-                          )),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildTopBar(),
+              _buildTabBar(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildDayTab(),
+                    _buildWeekTab(),
+                    _buildMonthTab(),
                   ],
-                  // Contribution Grid (calendar view) at the end
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    controller: _gridScrollController,
-                    child: _buildContributionGrid(),
-                  ),
-                  // Add extra space at the bottom for better scrollability
-                  const SizedBox(height: 150),
-                ],
-              ),
-            ),
-    );
-  }
-
-  Widget _buildPointsTrendSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Points Trend (Last 30 Days)',
-          style: GoogleFonts.nunito(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: AppColors.teal,
-            letterSpacing: 0.5,
-            shadows: [
-              Shadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 6,
-                offset: Offset(0, 2),
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        _buildImprovedCustomBarChart(),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return SizedBox(height: 16);
+  }
+
+  Widget _buildTabBar() {
+    return TabBar(
+      controller: _tabController,
+      indicatorColor: Color(0xFF00B4FF),
+      labelColor: Colors.white,
+      unselectedLabelColor: Colors.grey,
+      tabs: const [
+        Tab(text: 'Day'),
+        Tab(text: 'Week'),
+        Tab(text: 'Month'),
       ],
     );
   }
 
-  // A. Improved Custom Bar Chart
-  Widget _buildImprovedCustomBarChart() {
-    final now = DateTime.now();
-    final days = List.generate(30, (i) => now.subtract(Duration(days: 29 - i)));
-    final points = days.map((date) => _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0).toList();
-    final maxPoints = points.isEmpty ? 1 : points.reduce((a, b) => a > b ? a : b).toDouble();
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-      ),
-      padding: const EdgeInsets.all(12),
+  Widget _buildDayTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 32),
       child: Column(
         children: [
-          SizedBox(
-            height: 120,
+          const SizedBox(height: 16),
+          _buildCircularProgressPlaceholder(),
+          const SizedBox(height: 16),
+          _buildStatCardsPlaceholder(),
+          const SizedBox(height: 16),
+          _buildLineChartPlaceholder(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeekTab() {
+    if (_isLoading || _weekStatsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    // 1. Bar chart for the current week (Sunday start)
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday % 7)); // Sunday
+    final weekDays = List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+    final weekPoints = weekDays.map((date) => _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0).toList();
+    final maxBar = weekPoints.isEmpty ? 1 : weekPoints.reduce((a, b) => a > b ? a : b);
+    final todayIndex = weekDays.indexWhere((d) => d.day == now.day && d.month == now.month && d.year == now.year);
+    final totalPoints = weekPoints.fold(0, (a, b) => a + b);
+    // Average based on days so far in the week (up to today)
+    final daysSoFar = todayIndex + 1;
+    final avgPoints = daysSoFar > 0 ? (weekPoints.take(daysSoFar).fold(0, (a, b) => a + b) / daysSoFar).round() : 0;
+
+    // 2. Use precomputed week stats (actions = completed only)
+    final weekStats = [
+      {'value': _weekStreak.toString(), 'label': 'Streak'},
+      {'value': _weekActionsCompleted.toString(), 'label': 'Actions'},
+      {'value': _weekGratitude.toString(), 'label': 'Gratitude'},
+      {'value': _weekReflections.toString(), 'label': 'Reflections'},
+      {'value': _weekBestMoments.toString(), 'label': 'Best Moment'},
+    ];
+
+    // 3. Line chart for points per week for last 8 weeks
+    final weekStartDates = List.generate(8, (i) => startOfWeek.subtract(Duration(days: 7 * (7 - i))));
+    final weekTotals = weekStartDates.map((start) {
+      int sum = 0;
+      for (int d = 0; d < 7; d++) {
+        final date = start.add(Duration(days: d));
+        sum += _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0;
+      }
+      return sum;
+    }).toList();
+    final maxLine = weekTotals.isEmpty ? 1 : weekTotals.reduce((a, b) => a > b ? a : b).toDouble();
+    final avgLine = weekTotals.isEmpty ? 0 : weekTotals.reduce((a, b) => a + b) / weekTotals.length;
+    final weekLabels = weekStartDates.map((d) => _shortMonthLabel(d)).toList();
+    final currentWeekIndex = 7;
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          // Average and total points row (pill style)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(30, (index) {
-                final point = points[index];
-                final height = maxPoints > 0 ? (point / maxPoints) : 0.0;
-                final date = days[index];
-                return Expanded(
-                  child: Tooltip(
-                    message: '${_formatShortDate(date)}: $point point${point == 1 ? '' : 's'}',
-                    waitDuration: const Duration(milliseconds: 200),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.primaryBlue.withOpacity(0.85),
-                            AppColors.teal.withOpacity(0.85),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          if (point > 0)
-                            BoxShadow(
-                              color: AppColors.primaryBlue.withOpacity(0.18),
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                        ],
-                      ),
-                      height: height * 90,
-                    ),
-                  ),
-                );
-              }),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _pillStat(
+                  label: 'POINTS',
+                  value: totalPoints.toString(),
+                  color: blueMain,
+                ),
+                _pillStat(
+                  label: 'AVG',
+                  value: avgPoints.toString(),
+                  color: blueMain,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(_formatShortDate(days.first)),
-              Text(_formatShortDate(days[14])),
-              Text(_formatShortDate(days.last)),
-            ],
+          // Bar chart for week
+          Container(
+            height: 160,
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 0),
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxBar < 8 ? 8 : maxBar * 1.2,
+                minY: 0,
+                barTouchData: BarTouchData(enabled: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= weekDays.length) return const SizedBox.shrink();
+                        final isToday = idx == todayIndex;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            _weekdayAbbr(weekDays[idx].weekday),
+                            style: TextStyle(
+                              color: isToday ? blueMain : Colors.white70,
+                              fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        );
+                      },
+                      interval: 1,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(show: false),
+                barGroups: [
+                  for (int i = 0; i < weekPoints.length; i++)
+                    BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          toY: weekPoints[i].toDouble(),
+                          color: i == todayIndex ? blueMain : blueMain.withOpacity(0.7),
+                          width: 22,
+                          borderRadius: BorderRadius.circular(12),
+                          backDrawRodData: BackgroundBarChartRodData(
+                            show: true,
+                            toY: maxBar < 8 ? 8 : maxBar * 1.2,
+                            color: blueGrey,
+                          ),
+                        ),
+                      ],
+                      showingTooltipIndicators: [],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+          // Stat cards for week
+          SizedBox(
+            height: 120,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: weekStats.map((stat) => _statCard(stat['value']!, stat['label']!)).toList(),
+              ),
+            ),
+          ),
+          // Line chart for last 8 weeks
+          Container(
+            height: 160,
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 0),
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxLine < 8 ? 8 : maxLine * 1.2,
+                gridData: FlGridData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= weekLabels.length) return const SizedBox.shrink();
+                        final isCurrent = idx == currentWeekIndex;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: isCurrent
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: blueMain, width: 2),
+                                  ),
+                                  child: Text(
+                                    weekLabels[idx],
+                                    style: TextStyle(
+                                      color: blueMain,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  weekLabels[idx],
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                        );
+                      },
+                      interval: 1,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: [
+                      for (int i = 0; i < weekTotals.length; i++)
+                        FlSpot(i.toDouble(), weekTotals[i].toDouble()),
+                    ],
+                    isCurved: true,
+                    color: blueMain,
+                    barWidth: 5,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) {
+                        final isCurrent = index == currentWeekIndex;
+                        return FlDotCirclePainter(
+                          radius: isCurrent ? 7 : 5,
+                          color: Colors.white,
+                          strokeColor: isCurrent ? blueMain : Colors.white,
+                          strokeWidth: isCurrent ? 4 : 2,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          blueMain.withOpacity(0.3),
+                          blueMain.withOpacity(0.05),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                extraLinesData: ExtraLinesData(
+                  horizontalLines: [
+                    HorizontalLine(
+                      y: avgLine.toDouble(),
+                      color: blueLight,
+                      strokeWidth: 2,
+                      dashArray: [6, 6],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  String _formatShortDate(DateTime date) {
-    return "${date.day}/${date.month}";
-  }
-
-  Widget _buildContributionGrid() {
-    // Calculate the last 6 months including the current month
+  Widget _buildMonthTab() {
+    if (_isLoading || _monthStatsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final now = DateTime.now();
-    
-    // Calculate 5 months ago (to get 6 months total including current month)
-    DateTime fiveMonthsAgo;
-    if (now.month <= 5) {
-      // If current month is 1-5, go back to previous year
-      fiveMonthsAgo = DateTime(now.year - 1, now.month + 7, now.day);
-    } else {
-      // If current month is 6-12, stay in same year
-      fiveMonthsAgo = DateTime(now.year, now.month - 5, now.day);
-    }
-    
-    // Calculate days between five months ago and today
-    final daysDifference = now.difference(fiveMonthsAgo).inDays;
-    
-    // Generate days from five months ago to today
-    final days = List.generate(daysDifference + 1, (i) => fiveMonthsAgo.add(Duration(days: i)));
-    
-    // Group by week (columns)
-    final weeks = <List<DateTime>>[];
-    for (int i = 0; i < days.length; i += 7) {
-      if (i + 7 <= days.length) {
-        weeks.add(days.skip(i).take(7).toList());
-      } else {
-        // Handle the last partial week
-        weeks.add(days.skip(i).toList());
+    final firstDay = DateTime(now.year, now.month, 1);
+    final lastDay = DateTime(now.year, now.month + 1, 0);
+    final monthDays = List.generate(lastDay.day, (i) => DateTime(now.year, now.month, i + 1));
+    final firstWeekday = firstDay.weekday % 7; // 0=Sun, 1=Mon, ...
+    final totalCells = ((firstWeekday + lastDay.day) / 7).ceil() * 7;
+    final calendarCells = List.generate(totalCells, (i) {
+      final dayNum = i - firstWeekday + 1;
+      if (i < firstWeekday || dayNum > lastDay.day) return null;
+      return monthDays[dayNum - 1];
+    });
+    // For best moment days
+    final prefs = SharedPreferences.getInstance();
+    // Stat cards for month
+    final monthStats = [
+      {'value': _monthStreak.toString(), 'label': 'Streak'},
+      {'value': _monthActions.toString(), 'label': 'Actions'},
+      {'value': _monthGratitude.toString(), 'label': 'Gratitude'},
+      {'value': _monthReflections.toString(), 'label': 'Reflections'},
+      {'value': _monthBestMoments.toString(), 'label': 'Best Moment'},
+    ];
+    // Points and average for the month
+    final monthPoints = monthDays.fold(0, (sum, date) => sum + (_pointsHistory[AppDateUtils.getDateKey(date)] ?? 0));
+    final today = DateTime.now();
+    final daysSoFar = today.month == now.month && today.year == now.year ? today.day : lastDay.day;
+    final monthAvg = daysSoFar > 0 ? (monthPoints / daysSoFar).round() : 0;
+    // Line chart for last 6 months, 2 points per month (1st-15th, 16th-end)
+    final monthStartDates = List.generate(6, (i) {
+      final date = DateTime(now.year, now.month - 5 + i, 1);
+      return date;
+    });
+    final List<int> halfMonthTotals = [];
+    final List<String> halfMonthLabels = [];
+    for (final start in monthStartDates) {
+      final daysInMonth = DateTime(start.year, start.month + 1, 0).day;
+      // 1st half
+      int sum1 = 0;
+      for (int d = 0; d < 15 && d < daysInMonth; d++) {
+        final date = DateTime(start.year, start.month, d + 1);
+        sum1 += _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0;
       }
-    }
-    
-    // Month labels - show the last 6 months including current month
-    final monthLabels = <int, String>{};
-    final shownMonths = <String>{};
-    
-    // Get all months in the 6-month range (including current month)
-    final monthsInRange = <String>{};
-    DateTime currentMonth = DateTime(fiveMonthsAgo.year, fiveMonthsAgo.month, 1);
-    for (int i = 0; i < 6; i++) {
-      monthsInRange.add('${currentMonth.year}_${currentMonth.month}');
-      currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
-    }
-    
-    // Find the column index for the first day of each month
-    final monthLabelPositions = <int, String>{};
-    for (int w = 0; w < weeks.length; w++) {
-      final week = weeks[w];
-      for (int d = 0; d < week.length; d++) {
-        final day = week[d];
-        final monthKey = '${day.year}_${day.month}';
-        if (!shownMonths.contains(monthKey) && monthsInRange.contains(monthKey) && day.day == 1) {
-          // The column index in the grid is w (week) * 7 + d (day in week)
-          final colIndex = w;
-          monthLabelPositions[colIndex * 7 + d] = _monthAbbr(day.month);
-          shownMonths.add(monthKey);
-        }
+      halfMonthTotals.add(sum1);
+      halfMonthLabels.add(_shortMonthLabel(start));
+      // 2nd half
+      int sum2 = 0;
+      for (int d = 15; d < daysInMonth; d++) {
+        final date = DateTime(start.year, start.month, d + 1);
+        sum2 += _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0;
       }
+      halfMonthTotals.add(sum2);
+      halfMonthLabels.add('•');
     }
-    
-    // Weekday labels (Mon, Wed, Fri)
-    final weekdayLabels = [1, 3, 5]; // Monday, Wednesday, Friday
-    
-    // Calculate max points for color scaling
-    final maxPoints = _pointsHistory.values.isEmpty ? 1 : _pointsHistory.values.reduce((a, b) => a > b ? a : b);
-    
-    // Calculate the week index for the first day of each of the last 6 months
-    final monthStartWeeks = <int>[];
-    for (int i = 0; i < 6; i++) {
-      final monthDate = DateTime(fiveMonthsAgo.year, fiveMonthsAgo.month + i, 1);
-      // Find the week index where this month starts
-      int weekIdx = weeks.indexWhere((week) => week.any((d) => d.year == monthDate.year && d.month == monthDate.month && d.day == 1));
-      if (weekIdx == -1) weekIdx = 0; // fallback if not found
-      monthStartWeeks.add(weekIdx);
-    }
+    final maxLine = halfMonthTotals.isEmpty ? 1 : halfMonthTotals.reduce((a, b) => a > b ? a : b).toDouble();
+    final avgLine = halfMonthTotals.isEmpty ? 0 : halfMonthTotals.reduce((a, b) => a + b) / halfMonthTotals.length;
+    final currentMonthIndex = 11; // last point is current half-month
 
-    // Always show 6 evenly spaced month labels
-    final totalWeeks = weeks.length;
-    // Get the last 6 months (including current month)
-    List<String> monthLabelsList = [];
-    DateTime firstMonth;
-    if (now.month <= 5) {
-      firstMonth = DateTime(now.year - 1, now.month + 7, 1);
-    } else {
-      firstMonth = DateTime(now.year, now.month - 5, 1);
-    }
-    for (int i = 0; i < 6; i++) {
-      final monthDate = DateTime(firstMonth.year, firstMonth.month + i, 1);
-      monthLabelsList.add(_monthAbbr(monthDate.month));
-    }
-    // Calculate label positions
-    final labelPositions = <int>[];
-    if (totalWeeks > 1) {
-      final step = (totalWeeks - 1) / 5;
-      for (int i = 0; i < 6; i++) {
-        labelPositions.add((i * step).round());
-      }
-    } else {
-      labelPositions.addAll(List.filled(6, 0));
-    }
-    // Build the month label row
-    final monthLabelRow = <Widget>[];
-    for (int w = 0; w < totalWeeks; w++) {
-      final labelIdx = labelPositions.indexOf(w);
-      if (labelIdx != -1) {
-        monthLabelRow.add(Container(
-          width: 20,
-          alignment: Alignment.centerLeft,
-          child: Text(monthLabelsList[labelIdx], style: GoogleFonts.nunito(fontSize: 10, color: AppColors.primaryBlue)),
-        ));
-      } else {
-        monthLabelRow.add(Container(width: 20));
-      }
-    }
-
-    return EuphoricCard(
+    return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Last 6 Months (Points)', 
-               style: GoogleFonts.nunito(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 16),
+          // Points and Avg pills
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Month labels
+                _pillStat(
+                  label: 'POINTS',
+                  value: monthPoints.toString(),
+                  color: blueMain,
+                ),
+                _pillStat(
+                  label: 'AVG',
+                  value: monthAvg.toString(),
+                  color: blueMain,
+                ),
+              ],
+            ),
+          ),
+          // Calendar grid
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              children: [
                 Row(
-                  children: [
-                    const SizedBox(width: 20), // space for weekday labels
-                    ...monthLabelRow,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text('S', style: TextStyle(color: Colors.white54)),
+                    Text('M', style: TextStyle(color: Colors.white54)),
+                    Text('T', style: TextStyle(color: Colors.white54)),
+                    Text('W', style: TextStyle(color: Colors.white54)),
+                    Text('T', style: TextStyle(color: Colors.white54)),
+                    Text('F', style: TextStyle(color: Colors.white54)),
+                    Text('S', style: TextStyle(color: Colors.white54)),
                   ],
                 ),
-                const SizedBox(height: 2),
-                // Grid with weekday labels
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Weekday labels
-                    Column(
-                      children: List.generate(7, (d) {
-                        if (weekdayLabels.contains(d)) {
-                          return Container(
-                            height: 15,
-                            alignment: Alignment.centerRight,
-                            child: Text(_weekdayAbbr(d), style: GoogleFonts.nunito(fontSize: 10, color: AppColors.primaryBlue)),
-                          );
-                        } else {
-                          return SizedBox(height: 15);
-                        }
-                      }),
-                    ),
-                    // The grid (flattened for alignment)
-                    Column(
-                      children: List.generate(7, (d) {
+                const SizedBox(height: 8),
+                FutureBuilder<SharedPreferences>(
+                  future: prefs,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const SizedBox(height: 200);
+                    final prefs = snapshot.data!;
+                    return Column(
+                      children: List.generate((calendarCells.length / 7).ceil(), (row) {
                         return Row(
-                          children: List.generate(weeks.length, (w) {
-                            if (d >= weeks[w].length) {
-                              return SizedBox(height: 15, width: 13);
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(7, (col) {
+                            final idx = row * 7 + col;
+                            final date = idx < calendarCells.length ? calendarCells[idx] : null;
+                            if (date == null) {
+                              return Container(width: 32, height: 32);
                             }
-                            final date = weeks[w][d];
                             final dateKey = AppDateUtils.getDateKey(date);
                             final points = _pointsHistory[dateKey] ?? 0;
-                            Color color;
-                            if (points == 0) {
-                              color = Colors.grey[300]!;
-                            } else if (points == 1 || points == 2) {
-                              color = Colors.green[200]!;
-                            } else if (points == 3 || points == 4) {
-                              color = Colors.green[400]!;
-                            } else if (points == 5 || points == 6) {
-                              color = Colors.green[600]!;
-                            } else {
-                              color = Colors.green[800]!;
-                            }
+                            final bestMoment = prefs.getString('best_moment_$dateKey');
+                            final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
+                            final isFilled = points > 0;
                             return Container(
-                              margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
-                              width: 13,
-                              height: 13,
+                              width: 32,
+                              height: 32,
+                              margin: const EdgeInsets.symmetric(vertical: 2),
                               decoration: BoxDecoration(
-                                color: color,
-                                borderRadius: BorderRadius.circular(3),
+                                color: isFilled ? blueMain : blueGrey,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Text(
+                                    date.day.toString(),
+                                    style: TextStyle(
+                                      color: isFilled ? Colors.black : Colors.white54,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (hasBestMoment && isFilled)
+                                    const Positioned(
+                                      bottom: -0.7,
+                                      left: 0,
+                                      right: 0,
+                                      child: Icon(Icons.star, color: Colors.black, size: 9),
+                                    ),
+                                ],
                               ),
                             );
                           }),
                         );
                       }),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text('0 pts', style: GoogleFonts.nunito(fontSize: 12, color: AppColors.primaryBlue)),
-                  const SizedBox(width: 10),
-                ],
+          // Stat cards for month
+          SizedBox(
+            height: 120,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: monthStats.map((stat) => _statCard(stat['value']!, stat['label']!)).toList(),
               ),
-              Row(
-                children: [
-                  Container(width: 13, height: 13, color: Colors.grey[300]),
-                  Container(width: 13, height: 13, color: Colors.green[200]),
-                  Container(width: 13, height: 13, color: Colors.green[400]),
-                  Container(width: 13, height: 13, color: Colors.green[600]),
-                  Container(width: 13, height: 13, color: Colors.green[800]),
-                  const SizedBox(width: 10),
+            ),
+          ),
+          // Line chart for last 6 months, 2 points per month
+          Container(
+            height: 160,
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 0),
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxLine < 8 ? 8 : maxLine * 1.2,
+                gridData: FlGridData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= halfMonthLabels.length) return const SizedBox.shrink();
+                        final isCurrent = idx == currentMonthIndex;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: isCurrent
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: blueMain, width: 2),
+                                  ),
+                                  child: Text(
+                                    halfMonthLabels[idx],
+                                    style: const TextStyle(
+                                      color: blueMain,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  halfMonthLabels[idx],
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                        );
+                      },
+                      interval: 1,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: [
+                      for (int i = 0; i < halfMonthTotals.length; i++)
+                        FlSpot(i.toDouble(), halfMonthTotals[i].toDouble()),
+                    ],
+                    isCurved: true,
+                    color: blueMain,
+                    barWidth: 5,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) {
+                        final isCurrent = index == currentMonthIndex;
+                        return FlDotCirclePainter(
+                          radius: isCurrent ? 7 : 5,
+                          color: Colors.white,
+                          strokeColor: isCurrent ? blueMain : Colors.white,
+                          strokeWidth: isCurrent ? 4 : 2,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          blueMain.withOpacity(0.3),
+                          blueMain.withOpacity(0.05),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
+                extraLinesData: ExtraLinesData(
+                  horizontalLines: [
+                    HorizontalLine(
+                      y: avgLine.toDouble(),
+                      color: blueLight,
+                      strokeWidth: 2,
+                      dashArray: [6, 6],
+                    ),
+                  ],
+                ),
               ),
-              Text('6+ pts', style: GoogleFonts.nunito(fontSize: 12, color: AppColors.primaryBlue)),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatisticsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Your Progress',
-          style: GoogleFonts.nunito(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: AppColors.teal,
-            letterSpacing: 0.5,
-            shadows: [
-              Shadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 6,
-                offset: Offset(0, 2),
+  Widget _buildCircularProgressPlaceholder() {
+    final int pointsToday = _todayPoints;
+    final int pointsGoal = 12; // Max value for full circle
+    final double progress = (pointsToday / pointsGoal).clamp(0.0, 1.0);
+    return SizedBox(
+      width: 240,
+      height: 240,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size(220, 220),
+            painter: _RoundedCircularProgressPainter(
+              progress: progress,
+              backgroundColor: blueGrey,
+              progressColor: blueMain,
+              strokeWidth: 14,
+            ),
+          ),
+          Container(
+            width: 180,
+            height: 180,
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Today', style: TextStyle(color: blueMain, fontSize: 22, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Text(
+                    pointsToday.toString(),
+                    style: const TextStyle(color: blueMain, fontSize: 48, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('points', style: TextStyle(color: blueLight, fontSize: 17)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBarChartPlaceholder() {
+    return Container(
+      height: 160,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Center(
+        child: Text('Bar Chart Placeholder', style: TextStyle(color: Colors.white54)),
+      ),
+    );
+  }
+
+  Widget _buildCalendarGridPlaceholder() {
+    return Container(
+      height: 240,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Center(
+        child: Text('Calendar Grid Placeholder', style: TextStyle(color: Colors.white54)),
+      ),
+    );
+  }
+
+  Widget _buildStatCardsPlaceholder() {
+    final todayStats = [
+      {'value': _todayStreak.toString(), 'label': 'Streak'},
+      {'value': _todayActionsCompleted.toString(), 'label': 'Actions'},
+      {'value': _todayGratitude.toString(), 'label': 'Gratitude'},
+      {'value': _todayReflections.toString(), 'label': 'Reflections'},
+      {'value': _todayBestMoment ? 'Yes' : 'No', 'label': 'Best Moment'},
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: todayStats.map((stat) => _statCard(stat['value']!, stat['label']!)).toList(),
+      ),
+    );
+  }
+
+  Widget _statCard(String value, String label) {
+    return Container(
+      width: 120,
+      constraints: const BoxConstraints(minHeight: 75),
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 3),
+          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLineChartPlaceholder() {
+    // Get last 7 days' points
+    final now = DateTime.now();
+    final days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
+    final points = days.map((date) => _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0).toList();
+    final maxPoints = points.isEmpty ? 1 : points.reduce((a, b) => a > b ? a : b).toDouble();
+    final avgPoints = points.isEmpty ? 0 : points.reduce((a, b) => a + b) / points.length;
+    final weekLabels = days.map((d) => _weekdayAbbr(d.weekday)).toList();
+    final todayIndex = days.indexWhere((d) => d.day == now.day && d.month == now.month && d.year == now.year);
+
+    return Container(
+      height: 160,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 0),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: maxPoints < 8 ? 8 : maxPoints * 1.2,
+          gridData: FlGridData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 28,
+                getTitlesWidget: (value, meta) {
+                  final idx = value.toInt();
+                  if (idx < 0 || idx >= weekLabels.length) return const SizedBox.shrink();
+                  final isToday = idx == todayIndex;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: isToday
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: blueMain, width: 2),
+                            ),
+                            child: Text(
+                              weekLabels[idx],
+                              style: const TextStyle(
+                                color: blueMain,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            weekLabels[idx],
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                  );
+                },
+                interval: 1,
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: [
+                for (int i = 0; i < points.length; i++)
+                  FlSpot(i.toDouble(), points[i].toDouble()),
+              ],
+              isCurved: true,
+              color: blueMain,
+              barWidth: 5,
+              isStrokeCapRound: true,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, bar, index) {
+                  final isCurrent = index == todayIndex;
+                  return FlDotCirclePainter(
+                    radius: isCurrent ? 7 : 5,
+                    color: Colors.white,
+                    strokeColor: isCurrent ? blueMain : Colors.white,
+                    strokeWidth: isCurrent ? 4 : 2,
+                  );
+                },
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    blueMain.withOpacity(0.3),
+                    blueMain.withOpacity(0.05),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          extraLinesData: ExtraLinesData(
+            horizontalLines: [
+              HorizontalLine(
+                y: avgPoints.toDouble(),
+                color: blueLight,
+                strokeWidth: 2,
+                dashArray: [6, 6],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-
-        _buildStatRow(Icons.local_fire_department, 'Current Streak', '${_stats['currentStreak']} days', AppColors.warning),
-        _buildStatRow(Icons.emoji_events, 'Best Streak', '${_stats['streakDays']} days', AppColors.warning),
-
-        _buildStatRow(Icons.stars, 'Total Points', '${_pointsHistory.values.fold(0, (sum, points) => sum + points)}', Colors.purple),
-        _buildStatRow(Icons.list_alt, 'Total Actions Taken', '$_totalActionsTaken', Colors.purple),
-        
-        _buildStatRow(Icons.calendar_today, 'Total Days', '${_stats['totalDays']} days', AppColors.warning),
-        _buildStatRow(Icons.auto_awesome, 'Total Reflections', '${_stats['totalReflections']} days', AppColors.warning),
-        
-        _buildStatRow(Icons.favorite, 'Total Gratitude Added', '$_totalGratitude', Colors.purple),
-        _buildStatRow(Icons.star, 'Total Best Moments', '$_totalBestMoments', Colors.purple),
-      ],
-    );
-  }
-
-  Widget _buildStatRow(IconData icon, String title, String value, Color titleColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, color: titleColor, size: 26),
-          const SizedBox(width: 14),
-          Expanded(child: Text(title, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w600, color: titleColor))),
-          Text(value, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.bold, color: titleColor)),
-        ],
       ),
     );
   }
 
-  String _monthAbbr(int month) {
-    const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return months[month];
+  String _weekdayAbbr(int weekday) {
+    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    return days[(weekday % 7)];
   }
 
-  String _weekdayAbbr(int weekday) {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return days[weekday];
+  String _shortMonthLabel(DateTime date) {
+    const months = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+    ];
+    return months[date.month - 1];
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _gridScrollController.dispose();
     super.dispose();
   }
+
+  Widget _pillStat({required String label, required String value, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        border: Border.all(color: color, width: 1.2),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$label: ', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15)),
+          Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 17)),
+        ],
+      ),
+    );
+  }
+}
+
+// Custom painter for rounded circular progress
+class _RoundedCircularProgressPainter extends CustomPainter {
+  final double progress;
+  final Color backgroundColor;
+  final Color progressColor;
+  final double strokeWidth;
+
+  _RoundedCircularProgressPainter({
+    required this.progress,
+    required this.backgroundColor,
+    required this.progressColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final startAngle = -pi / 2;
+    final sweepAngle = 2 * pi * progress;
+
+    // Draw background circle
+    final bgPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    // Draw progress arc with rounded ends
+    final progressPaint = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, startAngle, sweepAngle, false, progressPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 } 

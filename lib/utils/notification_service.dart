@@ -8,21 +8,34 @@ import '../screens/reminder_settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
     tz.initializeTimeZones();
-    final String timeZoneName = await FlutterNativeTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(timeZoneName));
+    try {
+      final String timeZoneName = await FlutterNativeTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (e, s) {
+        debugPrint('Timezone init failed: $e');
+        FirebaseCrashlytics.instance.recordError(e, s);
+    }
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: DarwinInitializationSettings(),
     );
-    await _notificationsPlugin.initialize(initializationSettings);
+    await _notificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (details) {
+        // Safe no-op or actual navigation
+        debugPrint('Notification clicked: ${details.payload}');
+      },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground, // Optional for background support
+    );
   }
 
   static Future<void> scheduleDailyReflectionReminder(TimeOfDay time) async {
@@ -224,3 +237,8 @@ class NotificationService {
     );
   }
 } 
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse response) {
+  debugPrint('Background notification tap: ${response.payload}');
+}

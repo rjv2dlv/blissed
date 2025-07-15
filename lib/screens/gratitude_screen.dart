@@ -85,9 +85,10 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       GradientHeader(
-                        icon: Icons.favorite,
+                        icon: Icons.favorite_border,
                         title: 'What are you grateful for today?',
-                        iconColor: AppColors.accentYellow,
+                        iconColor: Colors.white,
+                        iconSize: 24,
                       ),
                       const SizedBox(height: 24),
                       EuphoricCardWithBorder(
@@ -99,7 +100,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
                             children: [
                               Text(
                                 'What are you grateful for today?',
-                                style: AppTextStyles.question,
+                                style: AppTextStyles.question.copyWith(color: Color(0xFF00B4FF)),
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -120,11 +121,11 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
                                       hintStyle: AppTextStyles.description.copyWith(color: AppColors.textPrimary.withOpacity(0.5)),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: AppColors.primaryBlue.withOpacity(0.3)),
+                                        borderSide: BorderSide(color: Color(0xFF00B4FF).withOpacity(0.3)),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: AppColors.teal, width: 2),
+                                        borderSide: BorderSide(color: Color(0xFF00B4FF), width: 2),
                                       ),
                                       filled: true,
                                       fillColor: Colors.white.withOpacity(0.8),

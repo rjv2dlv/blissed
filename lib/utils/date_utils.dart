@@ -15,6 +15,7 @@ class AppDateUtils {
   }
 
   static String getDateKey(DateTime date) {
+    print('fetching key for: ${date.year}_${date.month}_${date.day}');
     return '${date.year}_${date.month}_${date.day}';
   }
 
