@@ -15,6 +15,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'utils/api_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   // Ensure Flutter is initialized first
@@ -83,6 +85,18 @@ if (settings.authorizationStatus == AuthorizationStatus.authorized ||
       print('Notification service initialization failed: $e');
       // Continue without notifications if it fails
     }
+
+    // On app launch, ensure user is saved/updated in backend
+    final userId = await getOrCreateUserId();
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    final prefs = await SharedPreferences.getInstance();
+    final reminderStrings = prefs.getStringList('reminders') ?? ['8:0', '5:0'];
+    await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings);
+
+    // Listen for FCM token refresh
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      await ApiClient.updateUserProfile(userId, newToken, reminderStrings);
+    });
 
     print('All services initialized, starting app');
     runApp(const MyApp());

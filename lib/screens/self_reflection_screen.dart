@@ -361,17 +361,6 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       final random = Random();
       final suggestion = suggestions[random.nextInt(suggestions.length)];
       _controllers[_currentCard].text = suggestion;
-      
-      // Show a snackbar with the suggestion
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✨ $suggestion'),
-          backgroundColor: Color(0xFF00B4FF),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
     }
   }
 

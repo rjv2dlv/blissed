@@ -6,6 +6,8 @@ import '../utils/app_colors.dart';
 import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../utils/api_client.dart';
 import '../utils/notification_service.dart';
 
 class ReminderSettingsScreen extends StatefulWidget {
@@ -25,26 +27,41 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
 
   Future<void> _loadReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final reminderStrings = prefs.getStringList('reminders') ?? [];
-    setState(() {
-      _reminders = reminderStrings.map((s) {
-        final parts = s.split(':');
-        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-      }).toList();
-      _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
-      _isLoading = false;
-    });
+    final reminderStrings = prefs.getStringList('reminders');
+    if (reminderStrings == null || reminderStrings.isEmpty) {
+      // Set default reminders if none exist
+      _reminders = [
+        const TimeOfDay(hour: 8, minute: 0),
+        const TimeOfDay(hour: 17, minute: 0),
+      ];
+      await _saveReminders();
+    } else {
+      setState(() {
+        _reminders = reminderStrings.map((s) {
+          final parts = s.split(':');
+          return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        }).toList();
+        _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final reminderStrings = _reminders.map((t) => '${t.hour}:${t.minute}').toList();
+    final reminderStrings = _reminders.map((t) {
+      return '${t.hour}:${t.minute}';
+    }).toList();
     await prefs.setStringList('reminders', reminderStrings);
     // Cancel all previous notifications and reschedule
     await NotificationService.cancelAllReminders();
     for (final t in _reminders) {
       await NotificationService.scheduleSmartReminder(t);
     }
+    // Update user profile in backend
+    final userId = await getOrCreateUserId();
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings);
   }
 
   Future<void> _addReminder() async {

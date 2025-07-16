@@ -70,6 +70,9 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         _actionController.clear();
       });
       _saveActions();
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Action Added')),
+      );
     }
   }
 
@@ -85,6 +88,14 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
       _saveActions();
       if (status == 'completed') {
         await PointsUtils.incrementToday();
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Action Marked Completed')),
+        );
+      }
+      else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Action Marked Rejected')),
+        );
       }
     });
   }
