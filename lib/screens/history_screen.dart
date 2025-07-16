@@ -130,14 +130,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       contributionMap[dateKey] = activityCount;
     }
 
-    print('printing the testing now..');
-    final allKeys = prefs.getKeys();
-    for (final key in allKeys) {
-      if (key.startsWith('self_reflection_')) {
-        print('Reflection key: $key, value: ${prefs.getStringList(key)}');
-      }
-    }
-
     setState(() {
       _stats = {
         'totalReflections': totalReflections,

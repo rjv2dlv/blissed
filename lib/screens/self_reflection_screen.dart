@@ -100,7 +100,6 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   void initState() {
     super.initState();
     _loadTodayAnswers();
-    Future.microtask(() => _printAllReflectionKeys());
   }
 
   Future<void> _loadTodayAnswers() async {
@@ -151,7 +150,6 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       const SnackBar(content: Text('Reflection saved! 🌟')),
     );
     print('Saving reflection to key: self_reflection_${AppDateUtils.getDateKey(DateTime.now())}');
-    print('Value: ${_controllers.map((c) => c.text).toList()}');
   }
 
   String _todayKey() {
@@ -247,7 +245,6 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               ),
               validator: (value) {
-                print('Validating: $value');
                 return value == null || value.isEmpty ? 'Please answer' : null;
               },
             ),
@@ -339,16 +336,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       ),
     );
   }
-
-  Future<void> _printAllReflectionKeys() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys();
-    for (var key in keys) {
-      if (key.startsWith('self_reflection_')) {
-        print('Reflection key: $key, value: ${prefs.getStringList(key)}');
-      }
-    }
-  }
+  
 
   // Get suggestions for the current question
   List<String> _getSuggestionsForCurrentQuestion() {
@@ -506,7 +494,6 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
                                     child: _currentCard == _questions.length - 1
                                         ? GradientButton(
                                             onPressed: () {
-                                              print('About to call _saveTodayAnswers');
                                               if (_formKey.currentState!.validate()) {
                                                 _saveTodayAnswers();
                                               }

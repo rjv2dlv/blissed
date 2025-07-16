@@ -22,9 +22,7 @@ void main() async {
 
   // Global error handler for all uncaught Dart errors
 
-  runZonedGuarded(() async {
-    print('Initializing');
-    
+  runZonedGuarded(() async {    
     // Initialize Firebase first
     print('Initializing Firebase');
     try {
@@ -205,15 +203,6 @@ class _MainNavigationState extends State<MainNavigation> {
     ];
   }
 
-
-  /*List<Widget> get _screens => [
-    SelfReflectionScreen(),
-    DailyActionsScreen(),
-    BestMomentScreen(),
-    GratitudeScreen(),
-    ProgressScreen(),
-  ];*/
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -229,7 +218,6 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     print('Building MainNavigation');
-    print('SelfReflectionScreen build called');
     final titles = [
       'Self-Reflection',
       'Daily Actions',
