@@ -14,19 +14,11 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   // Ensure Flutter is initialized first
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Global error handler for Flutter framework errors
-  //FlutterError.onError = (FlutterErrorDetails details) {
-  //  FlutterError.presentError(details);
-    // TODO: Send error details to a crash reporting service
-  //  print('FlutterError:');
-  //  print(details.exceptionAsString());
-  //  print(details.stack);
-  //};
 
   // Global error handler for all uncaught Dart errors
 
@@ -38,6 +30,37 @@ void main() async {
     try {
       await Firebase.initializeApp();
       print('Firebase initialized');
+      
+      NotificationSettings settings = await FirebaseMessaging.instance.requestPermission();
+
+if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+    settings.authorizationStatus == AuthorizationStatus.provisional) {
+  print('Notification permission granted: ${settings.authorizationStatus}');
+
+  // Listen for token refresh
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    print('New FCM Token (refreshed): $newToken');
+    // Send to backend here
+  });
+
+  // Delay a bit to let APNs assign a token (especially on fresh installs)
+  await Future.delayed(Duration(seconds: 2));
+
+  try {
+    final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+    print('APNs Token: $apnsToken');
+
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    print('FCM Token: $fcmToken');
+  } catch (e) {
+    print('Failed to get APNs/FCM Token: $e');
+  }
+} else {
+  print('User declined or has not accepted notification permissions');
+}
+
+      print('Notification settings initialized');
+
       FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
       FirebaseCrashlytics.instance.setCustomKey("build_mode", kReleaseMode ? "release" : "debug");
     } catch (e) {
@@ -168,13 +191,28 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  List<Widget> get _screens => [
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      SelfReflectionScreen(),
+      DailyActionsScreen(),
+      BestMomentScreen(),
+      GratitudeScreen(),
+      ProgressScreen(),
+    ];
+  }
+
+
+  /*List<Widget> get _screens => [
     SelfReflectionScreen(),
     DailyActionsScreen(),
     BestMomentScreen(),
     GratitudeScreen(),
     ProgressScreen(),
-  ];
+  ];*/
 
   void _onItemTapped(int index) {
     setState(() {
@@ -252,6 +290,7 @@ class _MainNavigationState extends State<MainNavigation> {
               fit: BoxFit.cover,
               color: Colors.black.withOpacity(0.08),
               colorBlendMode: BlendMode.darken,
+              cacheWidth: 1080,
             ),
           ),
           _screens[_selectedIndex],

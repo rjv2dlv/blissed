@@ -7,7 +7,6 @@ import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/notification_service.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class ReminderSettingsScreen extends StatefulWidget {
   @override
@@ -59,6 +58,9 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
         _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
       });
       _saveReminders();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Reminder added at ${picked.format(context)}')),
+      );
     }
   }
 
@@ -67,6 +69,9 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
       _reminders.removeAt(index);
     });
     _saveReminders();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Reminder Removed')),
+    );
   }
 
   @override

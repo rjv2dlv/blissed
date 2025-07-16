@@ -25,6 +25,7 @@ class BackgroundImage extends StatelessWidget {
             fit: BoxFit.cover,
             color: Colors.black.withOpacity(opacity),
             colorBlendMode: blendMode,
+            cacheWidth: MediaQuery.of(context).size.width.toInt(),
           ),
         ),
         child,

@@ -147,6 +147,9 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       _submitted = true;
     });
     await PointsUtils.incrementToday();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Reflection saved! 🌟')),
+    );
     print('Saving reflection to key: self_reflection_${AppDateUtils.getDateKey(DateTime.now())}');
     print('Value: ${_controllers.map((c) => c.text).toList()}');
   }
@@ -175,14 +178,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
     super.dispose();
   }
 
-  void _saveAnswers() {
-    if (_formKey.currentState!.validate()) {
-      // Will add persistence later
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Answers saved! 🌞')),
-      );
-    }
-  }
+
 
   void _nextCard() {
     if (_formKey.currentState!.validate()) {

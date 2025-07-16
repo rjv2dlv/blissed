@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:uuid/uuid.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -74,7 +75,11 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.high,
         ),
-        iOS: DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
@@ -229,7 +234,11 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.high,
         ),
-        iOS: DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
@@ -241,4 +250,14 @@ class NotificationService {
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse response) {
   debugPrint('Background notification tap: ${response.payload}');
+}
+
+Future<String> getOrCreateUserId() async {
+  final prefs = await SharedPreferences.getInstance();
+  String? userId = prefs.getString('user_id');
+  if (userId == null) {
+    userId = Uuid().v4();
+    await prefs.setString('user_id', userId);
+  }
+  return userId;
 }
