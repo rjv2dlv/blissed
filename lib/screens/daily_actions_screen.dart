@@ -23,6 +23,8 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   final List<Map<String, dynamic>> _actions = [];
   String? _lastLoadedDate;
   final Set<int> _fadingIndexes = {}; // Track which indexes are fading
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -36,34 +38,46 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   }
 
   Future<void> _loadActions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentDate = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD format
-    
-    // Check if we're loading data for a new day
-    if (_lastLoadedDate != null && _lastLoadedDate != currentDate) {
-      // New day - reset everything
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final userId = await getOrCreateUserId();
+      final now = DateTime.now();
+      final date = DateFormat('yyyy-MM-dd').format(now);
+      final response = await ApiClient.getActions(userId, date);
+      if (response.statusCode == 200) {
+        final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+        final actions = (data != null && data['actions'] != null)
+            ? (data['actions'] as List).map((e) => Map<String, dynamic>.from(e)).toList()
+            : <Map<String, dynamic>>[];
+        setState(() {
+          _actions.clear();
+          _actions.addAll(List<Map<String, dynamic>>.from(actions));
+          _isLoading = false;
+        });
+      } else if (response.statusCode == 404) {
+        setState(() {
+          _actions.clear();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Failed to load actions. (${response.statusCode})';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _actions.clear();
-        _actionController.clear();
-      });
-      _lastLoadedDate = currentDate;
-      return;
-    }
-    
-    final actionsString = prefs.getString(_todayKey);
-    if (actionsString != null) {
-      setState(() {
-        _actions.clear();
-        _actions.addAll(List<Map<String, dynamic>>.from(json.decode(actionsString)));
+        _errorMessage = 'Error loading actions: $e';
+        _isLoading = false;
       });
     }
-    _lastLoadedDate = currentDate;
   }
 
   Future<void> _saveActions() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_todayKey, json.encode(_actions));
-    // Also save to backend
+    // Only save to backend
     final userId = await getOrCreateUserId();
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);

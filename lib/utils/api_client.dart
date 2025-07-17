@@ -60,12 +60,48 @@ class ApiClient {
     );
   }
 
-  static Future<http.Response> putGratitude(String userId, String date, List<String> gratitudes) async {
+  static Future<http.Response> putGratitudes(String userId, String date, List<String> gratitudes) async {
     final url = Uri.parse('$userGratitudeBaseUrl/gratitude/$userId/$date');
     return await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'gratitude': gratitudes}),
+      body: jsonEncode({'gratitudes': gratitudes}),
     );
+  }
+
+  static Future<http.Response> getReflection(String userId, String date) async {
+    final url = Uri.parse('$userReflectionBaseUrl/reflections/$userId/$date');
+    return await http.get(
+      url,
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
+
+  static Future<http.Response> getActions(String userId, String date) async {
+    final url = Uri.parse('$userActionsBaseUrl/actions/$userId/$date');
+    return await http.get(
+      url,
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
+
+  static Future<String?> getBestMoment(String userId, String date) async {
+    final url = Uri.parse('$userBestMomentsBaseUrl/bestMoments/$userId/$date');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['moment'] as String?;
+    }
+    return null;
+  }
+
+  static Future<List<String>> getGratitudes(String userId, String date) async {
+    final url = Uri.parse('$userGratitudeBaseUrl/gratitude/$userId/$date');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return List<String>.from(data['gratitudes'] ?? []);
+    }
+    return [];
   }
 }

@@ -10,6 +10,7 @@ import '../shared/text_styles.dart';
 import '../shared/gradient_button.dart';
 import '../utils/api_client.dart';
 import '../utils/notification_service.dart';
+import 'package:intl/intl.dart';
 
 class BestMomentScreen extends StatefulWidget {
   @override
@@ -24,48 +25,31 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSavedMoment();
+    _loadBestMoment();
   }
 
-  Future<void> _loadSavedMoment() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _loadBestMoment() async {
+    final userId = await getOrCreateUserId();
     final now = DateTime.now();
-    final dateKey = '${now.year}_${now.month}_${now.day}';
-    final savedMoment = prefs.getString('best_moment_$dateKey');
-    
+    final date = DateFormat('yyyy-MM-dd').format(now);
+    print('getting best moment');
+    final moment = await ApiClient.getBestMoment(userId, date);
     setState(() {
-      _savedMoment = savedMoment;
+      _savedMoment = moment ?? '';
       _isLoading = false;
     });
+    print('done getting best moment: $_savedMoment : $moment');
   }
 
-  Future<void> _saveMoment() async {
-    if (_momentController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your best moment! 🌟')),
-      );
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    final now = DateTime.now();
-    final dateKey = '${now.year}_${now.month}_${now.day}';
-    final moment = _momentController.text.trim();
-    await prefs.setString('best_moment_$dateKey', moment);
-
+  Future<void> _saveBestMoment() async {
     setState(() {
-      _savedMoment = moment;
+      _savedMoment = _momentController.text;
     });
-    await PointsUtils.incrementToday();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Best moment saved! ✨')),
-    );
-
-    // Also save to backend
+    // Save to backend only
     final userId = await getOrCreateUserId();
-    final date = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    print('Saving best moment to backend: userId=$userId, date=$date, moment=$moment');
-    await ApiClient.putBestMoment(userId, date, moment);
+    final now = DateTime.now();
+    final date = DateFormat('yyyy-MM-dd').format(now);
+    await ApiClient.putBestMoment(userId, date, _momentController.text);
   }
 
   void _editMoment() {
@@ -77,6 +61,9 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
     return BackgroundImage(
       child: Scaffold(
         resizeToAvoidBottomInset: true,
@@ -96,11 +83,9 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
                 ),
                 const SizedBox(height: 16),
                 // Best Moment card
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
-                    : _savedMoment != null
-                        ? _buildSavedMomentCard()
-                        : _buildInputCard(),
+                (_savedMoment ?? '').trim().isNotEmpty
+                    ? _buildSavedMomentCard()
+                    : _buildInputCard(),
               ],
             ),
           ),
@@ -147,7 +132,7 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
           ),
           const SizedBox(height: 20),
           GradientButton(
-            onPressed: _saveMoment,
+            onPressed: _saveBestMoment,
             text: 'Save Best Moment',
             height: 48,
           ),

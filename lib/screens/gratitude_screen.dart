@@ -11,6 +11,8 @@ import '../utils/points_utils.dart';
 import '../shared/text_styles.dart';
 import '../utils/api_client.dart';
 import '../utils/notification_service.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 
 class GratitudeScreen extends StatefulWidget {
   @override
@@ -18,9 +20,8 @@ class GratitudeScreen extends StatefulWidget {
 }
 
 class _GratitudeScreenState extends State<GratitudeScreen> {
+  List<String> _gratitudes = [];
   final TextEditingController _gratitudeController = TextEditingController();
-  final List<String> _gratitudes = [];
-  String? _lastLoadedDate;
 
   @override
   void initState() {
@@ -28,53 +29,29 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
     _loadGratitudes();
   }
 
-  String get _todayKey {
-    final now = DateTime.now();
-    return 'gratitude_${AppDateUtils.getDateKey(now)}';
-  }
-
   Future<void> _loadGratitudes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentDate = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD format
-    if (_lastLoadedDate != null && _lastLoadedDate != currentDate) {
-      setState(() {
-        _gratitudes.clear();
-        _gratitudeController.clear();
-      });
-      _lastLoadedDate = currentDate;
-      return;
-    }
-    final gratitudesString = prefs.getString(_todayKey);
-    if (gratitudesString != null) {
-      setState(() {
-        _gratitudes.clear();
-        _gratitudes.addAll(List<String>.from(json.decode(gratitudesString)));
-      });
-    }
-    _lastLoadedDate = currentDate;
-  }
-
-  Future<void> _saveGratitudes() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_todayKey, json.encode(_gratitudes));
-
-    // Also save to backend
     final userId = await getOrCreateUserId();
     final now = DateTime.now();
-    final date = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    print('Saving gratitude to backend: userId=$userId, date=$date, gratitudes=$_gratitudes');
-    await ApiClient.putGratitude(userId, date, _gratitudes);
+    final date = DateFormat('yyyy-MM-dd').format(now);
+    final gratitudes = await ApiClient.getGratitudes(userId, date);
+    setState(() {
+      _gratitudes = gratitudes;
+    });
   }
 
-  void _addGratitude() {
+
+  Future<void> _addGratitude() async {
     final text = _gratitudeController.text.trim();
     if (text.isNotEmpty) {
       setState(() {
         _gratitudes.add(text);
         _gratitudeController.clear();
       });
-      _saveGratitudes();
-      PointsUtils.incrementToday();
+      final userId = await getOrCreateUserId();
+      final now = DateTime.now();
+      final date = DateFormat('yyyy-MM-dd').format(now);
+      print('Current: $_gratitudes');
+      await ApiClient.putGratitudes(userId, date, _gratitudes);
     }
   }
 
@@ -145,7 +122,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
                                   const SizedBox(height: 14),
                                   GradientButton(
                                     onPressed: _addGratitude,
-                                    text: 'Add',
+                                    text: 'Add Gratitude',
                                     height: 48,
                                   ),
                                 ],
@@ -167,10 +144,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
                                 return EuphoricCard(
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    child: Text(
-                                      gratitude,
-                                      style: AppTextStyles.answer,
-                                    ),
+                                    child: Text(gratitude, style: AppTextStyles.answer),
                                   ),
                                 );
                               },

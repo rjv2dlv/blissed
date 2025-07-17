@@ -12,6 +12,7 @@ import '../utils/points_utils.dart';
 import '../utils/api_client.dart';
 import 'package:intl/intl.dart';
 import '../utils/notification_service.dart';
+import 'dart:convert';
 
 class SelfReflectionScreen extends StatefulWidget {
   @override
@@ -29,6 +30,8 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   bool _submitted = false;
   List<String> _todayAnswers = [];
   String? _lastLoadedDate;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   // Comprehensive suggestion lists for each question
   final List<String> _identitySuggestions = [
@@ -106,45 +109,67 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   }
 
   Future<void> _loadTodayAnswers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final todayKey = _todayKey();
-    final currentDate = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD format
-    
-    // Check if we're loading data for a new day
-    if (_lastLoadedDate != null && _lastLoadedDate != currentDate) {
-      // New day - reset everything
-      setState(() {
-        _todayAnswers.clear();
-        _submitted = false;
-        _currentCard = 0;
-        for (int i = 0; i < _questions.length; i++) {
-          _controllers[i].clear();
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final userId = await getOrCreateUserId();
+      final now = DateTime.now();
+      final date = DateFormat('yyyy-MM-dd').format(now);
+      final response = await ApiClient.getReflection(userId, date);
+      if (response.statusCode == 200) {
+        final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+        final answers = (data != null && data['answers'] != null)
+            ? List<String>.from(data['answers'])
+            : [];
+        if (answers.length == _questions.length) {
+          setState(() {
+            _todayAnswers = List<String>.from(answers);
+            for (int i = 0; i < _questions.length; i++) {
+              _controllers[i].text = answers[i];
+            }
+            _submitted = true;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _todayAnswers = [];
+            for (int i = 0; i < _questions.length; i++) {
+              _controllers[i].clear();
+            }
+            _submitted = false;
+            _isLoading = false;
+          });
         }
-      });
-      _lastLoadedDate = currentDate;
-      return;
-    }
-    
-    final answers = prefs.getStringList(todayKey);
-    if (answers != null && answers.length == _questions.length) {
+      } else if (response.statusCode == 404) {
+        // No reflection for today
+        setState(() {
+          _todayAnswers = [];
+          for (int i = 0; i < _questions.length; i++) {
+            _controllers[i].clear();
+          }
+          _submitted = false;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Failed to load reflection. (${response.statusCode})';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _todayAnswers = answers;
-        for (int i = 0; i < _questions.length; i++) {
-          _controllers[i].text = answers[i];
-        }
-        _submitted = true;
+        _errorMessage = 'Error loading reflection: $e';
+        _isLoading = false;
       });
     }
-    _lastLoadedDate = currentDate;
   }
 
   Future<void> _saveTodayAnswers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final todayKey = _todayKey();
     final answers = _controllers.map((c) => c.text).toList();
-    await prefs.setStringList(todayKey, answers);
     setState(() {
-      _todayAnswers = answers;
+      _todayAnswers = List<String>.from(answers);
       _submitted = true;
     });
     await PointsUtils.incrementToday();
@@ -152,9 +177,9 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Reflection saved! 🌟')),
     );
-    print('Saving reflection to key: self_reflection_${AppDateUtils.getDateKey(DateTime.now())}');
+    print('Saving reflection to backend');
 
-    // Also save to backend
+    // Save to backend
     final userId = await getOrCreateUserId();
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);
