@@ -9,6 +9,8 @@ import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
 import '../shared/text_styles.dart';
+import '../utils/api_client.dart';
+import '../utils/notification_service.dart';
 
 class GratitudeScreen extends StatefulWidget {
   @override
@@ -55,6 +57,13 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
   Future<void> _saveGratitudes() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_todayKey, json.encode(_gratitudes));
+
+    // Also save to backend
+    final userId = await getOrCreateUserId();
+    final now = DateTime.now();
+    final date = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    print('Saving gratitude to backend: userId=$userId, date=$date, gratitudes=$_gratitudes');
+    await ApiClient.putGratitude(userId, date, _gratitudes);
   }
 
   void _addGratitude() {

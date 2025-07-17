@@ -8,6 +8,8 @@ import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
 import '../shared/text_styles.dart';
 import '../shared/gradient_button.dart';
+import '../utils/api_client.dart';
+import '../utils/notification_service.dart';
 
 class BestMomentScreen extends StatefulWidget {
   @override
@@ -48,16 +50,22 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final dateKey = '${now.year}_${now.month}_${now.day}';
-    
-    await prefs.setString('best_moment_$dateKey', _momentController.text.trim());
-    
+    final moment = _momentController.text.trim();
+    await prefs.setString('best_moment_$dateKey', moment);
+
     setState(() {
-      _savedMoment = _momentController.text.trim();
+      _savedMoment = moment;
     });
     await PointsUtils.incrementToday();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Best moment saved! ✨')),
     );
+
+    // Also save to backend
+    final userId = await getOrCreateUserId();
+    final date = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    print('Saving best moment to backend: userId=$userId, date=$date, moment=$moment');
+    await ApiClient.putBestMoment(userId, date, moment);
   }
 
   void _editMoment() {

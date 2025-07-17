@@ -7,6 +7,8 @@ class ApiClient {
     static const String userBaseUrl = AppAPIs.USER_API_BASE_URL;
     static const String userActionsBaseUrl = AppAPIs.USER_ACTIONS_API_BASE_URL;
     static const String userReflectionBaseUrl = AppAPIs.USER_REFLECTIONS_API_BASE_URL;
+    static const String userBestMomentsBaseUrl = AppAPIs.USER_BEST_MOMENTS_API_BASE_URL;
+    static const String userGratitudeBaseUrl = AppAPIs.USER_GRATITUDE_API_BASE_URL;
 
   static Future<http.Response> putUser(String userId, Map<String, dynamic> data) async {
     final url = Uri.parse('$userBaseUrl/users/$userId');
@@ -46,6 +48,24 @@ class ApiClient {
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'answers': answers}),
+    );
+  }
+
+  static Future<http.Response> putBestMoment(String userId, String date, String moment) async {
+    final url = Uri.parse('$userBestMomentsBaseUrl/bestMoments/$userId/$date');
+    return await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'moment': moment}),
+    );
+  }
+
+  static Future<http.Response> putGratitude(String userId, String date, List<String> gratitudes) async {
+    final url = Uri.parse('$userGratitudeBaseUrl/gratitude/$userId/$date');
+    return await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'gratitude': gratitudes}),
     );
   }
 }
