@@ -13,6 +13,7 @@ import '../utils/api_client.dart';
 import 'package:intl/intl.dart';
 import '../utils/notification_service.dart';
 import 'dart:convert';
+import '../utils/app_cache.dart';
 
 class SelfReflectionScreen extends StatefulWidget {
   @override
@@ -105,81 +106,59 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   @override
   void initState() {
     super.initState();
-    _loadTodayAnswers();
+    _loadTodayReflection();
   }
 
-  Future<void> _loadTodayAnswers() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final userId = await getOrCreateUserId();
-      final now = DateTime.now();
-      final date = DateFormat('yyyy-MM-dd').format(now);
-      final response = await ApiClient.getReflection(userId, date);
-      if (response.statusCode == 200) {
-        final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-        final answers = (data != null && data['answers'] != null)
-            ? List<String>.from(data['answers'])
-            : [];
-        if (answers.length == _questions.length) {
-          setState(() {
-            _todayAnswers = List<String>.from(answers);
-            for (int i = 0; i < _questions.length; i++) {
-              _controllers[i].text = answers[i];
-            }
-            _submitted = true;
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _todayAnswers = [];
-            for (int i = 0; i < _questions.length; i++) {
-              _controllers[i].clear();
-            }
-            _submitted = false;
-            _isLoading = false;
-          });
-        }
-      } else if (response.statusCode == 404) {
-        // No reflection for today
-        setState(() {
-          _todayAnswers = [];
-          for (int i = 0; i < _questions.length; i++) {
-            _controllers[i].clear();
-          }
-          _submitted = false;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMessage = 'Failed to load reflection. (${response.statusCode})';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
+  Future<void> _loadTodayReflection() async {
+    final userId = await getOrCreateUserId();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final cache = AppCache();
+    // Clear old cache for reflections
+    cache.clearOldCacheForType('reflection_', today);
+    final cacheKey = 'reflection_$today';
+    // Try cache first
+    final cached = cache.get<List<String>>(cacheKey);
+    if (cached != null) {
       setState(() {
-        _errorMessage = 'Error loading reflection: $e';
-        _isLoading = false;
+        _todayAnswers = List<String>.from(cached);
+        for (int i = 0; i < _controllers.length; i++) {
+          _controllers[i].text = i < cached.length ? cached[i] : '';
+        }
+        _submitted = true;
+      });
+      print('got the reflections from the cache.');
+      return;
+    }
+    // Otherwise, fetch from backend
+    final reflection = await ApiClient.getReflection(userId, today);
+    if (reflection != null) {
+      cache.set(cacheKey, reflection);
+      setState(() {
+        _todayAnswers = List<String>.from(reflection);
+        for (int i = 0; i < _controllers.length; i++) {
+          _controllers[i].text = i < reflection.length ? reflection[i] : '';
+        }
+        _submitted = true;
       });
     }
   }
 
   Future<void> _saveTodayAnswers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = _todayKey();
     final answers = _controllers.map((c) => c.text).toList();
+    await prefs.setStringList(todayKey, answers);
     setState(() {
-      _todayAnswers = List<String>.from(answers);
+      _todayAnswers = answers;
       _submitted = true;
     });
     await PointsUtils.incrementToday();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reflection saved! 🌟')),
-    );
-    print('Saving reflection to backend');
-
-    // Save to backend
+    // Update cache
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final cache = AppCache();
+    final cacheKey = 'reflection_$today';
+    cache.set(cacheKey, answers);
+    // Also save to backend
     final userId = await getOrCreateUserId();
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);

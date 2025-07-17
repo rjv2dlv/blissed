@@ -69,12 +69,15 @@ class ApiClient {
     );
   }
 
-  static Future<http.Response> getReflection(String userId, String date) async {
+  static Future<List<String>?> getReflection(String userId, String date) async {
     final url = Uri.parse('$userReflectionBaseUrl/reflections/$userId/$date');
-    return await http.get(
-      url,
-      headers: {'Content-Type': 'application/json'},
-    );
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Response data: $data');
+        return data['answers'] != null ? List<String>.from(data['answers']) : null;
+    }
+    return null;
   }
 
   static Future<http.Response> getActions(String userId, String date) async {

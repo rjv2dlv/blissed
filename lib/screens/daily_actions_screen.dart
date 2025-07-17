@@ -12,6 +12,8 @@ import '../shared/text_styles.dart';
 import '../utils/api_client.dart';
 import 'package:intl/intl.dart';
 import '../utils/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_cache.dart';
 
 class DailyActionsScreen extends StatefulWidget {
   @override
@@ -43,6 +45,23 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
       _errorMessage = null;
     });
     try {
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final cache = AppCache();
+      final cacheKey = 'actions_$today';
+      cache.clearOldCacheForType('actions_', today);
+      print('date: $today, cache key: $cacheKey');
+      final cached = cache.get<List<Map<String, dynamic>>>(cacheKey);
+      if (cached != null) {
+        print('returning from cache: $cached');
+        setState(() {
+          _actions.clear();
+          _actions.addAll(List<Map<String, dynamic>>.from(cached));
+          // If you have controllers for each action, update them here as well
+          // Example: for (int i = 0; i < _actions.length; i++) { _controllers[i].text = _actions[i]['text']; }
+        });
+        return;
+      }
+      // Otherwise, fetch from backend
       final userId = await getOrCreateUserId();
       final now = DateTime.now();
       final date = DateFormat('yyyy-MM-dd').format(now);
@@ -52,9 +71,14 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         final actions = (data != null && data['actions'] != null)
             ? (data['actions'] as List).map((e) => Map<String, dynamic>.from(e)).toList()
             : <Map<String, dynamic>>[];
+        
+        cache.set(cacheKey, actions);
+        if (!mounted) return;
         setState(() {
           _actions.clear();
           _actions.addAll(List<Map<String, dynamic>>.from(actions));
+          // If you have controllers for each action, update them here as well
+          // Example: for (int i = 0; i < _actions.length; i++) { _controllers[i].text = _actions[i]['text']; }
           _isLoading = false;
         });
       } else if (response.statusCode == 404) {
@@ -82,6 +106,11 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);
     await ApiClient.putActions(userId, date, _actions);
+
+    final cache = AppCache();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final cacheKey = 'actions_$today';
+    cache.set(cacheKey, _actions);
   }
 
   void _addAction() {
@@ -108,6 +137,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         _fadingIndexes.remove(index);
       });
       _saveActions();
+      print('saved action. $status');
       if (status == 'completed') {
         await PointsUtils.incrementToday();
         ScaffoldMessenger.of(context).showSnackBar(

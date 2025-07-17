@@ -11,6 +11,7 @@ import '../shared/gradient_button.dart';
 import '../utils/api_client.dart';
 import '../utils/notification_service.dart';
 import 'package:intl/intl.dart';
+import '../utils/app_cache.dart';
 
 class BestMomentScreen extends StatefulWidget {
   @override
@@ -30,15 +31,35 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
 
   Future<void> _loadBestMoment() async {
     final userId = await getOrCreateUserId();
-    final now = DateTime.now();
-    final date = DateFormat('yyyy-MM-dd').format(now);
-    print('getting best moment');
-    final moment = await ApiClient.getBestMoment(userId, date);
-    setState(() {
-      _savedMoment = moment ?? '';
-      _isLoading = false;
-    });
-    print('done getting best moment: $_savedMoment : $moment');
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final cache = AppCache();
+    // Clear old cache for best moments
+    cache.clearOldCacheForType('best_moment_', today);
+    final cacheKey = 'best_moment_$today';
+    // Try cache first
+    final cached = cache.get<String>(cacheKey);
+    if (cached != null) {
+      setState(() {
+        _savedMoment = cached;
+        _isLoading = false;
+      });
+      print('got the best moment from the cache.');
+      return;
+    }
+    // Otherwise, fetch from backend
+    final moment = await ApiClient.getBestMoment(userId, today);
+    if (moment != null) {
+      cache.set(cacheKey, moment);
+      setState(() {
+        _savedMoment = moment;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _savedMoment = '';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveBestMoment() async {
@@ -50,6 +71,10 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);
     await ApiClient.putBestMoment(userId, date, _momentController.text);
+    // Update cache
+    final cache = AppCache();
+    final cacheKey = 'best_moment_$date';
+    cache.set(cacheKey, _momentController.text);
   }
 
   void _editMoment() {

@@ -325,7 +325,11 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
       final bestMoment = prefs.getString('best_moment_$dateKey');
       final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
       if (hasReflection || hasActions || hasGratitude || hasBestMoment) monthStreak++;
-      if (hasActions) monthActions += List<Map<String, dynamic>>.from(json.decode(actionsData!)).length;
+      if (hasActions) {
+        final actions = List<Map<String, dynamic>>.from(json.decode(actionsData!));
+        final completedCount = actions.where((a) => a['status'] == 'completed').length;
+        monthActions += completedCount;
+      }
       if (hasGratitude) monthGratitude += List<String>.from(json.decode(gratitudeData!)).length;
       if (hasReflection) monthReflections++;
       if (hasBestMoment) monthBestMoments++;

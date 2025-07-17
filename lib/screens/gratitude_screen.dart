@@ -13,6 +13,7 @@ import '../utils/api_client.dart';
 import '../utils/notification_service.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import '../utils/app_cache.dart';
 
 class GratitudeScreen extends StatefulWidget {
   @override
@@ -31,14 +32,33 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
 
   Future<void> _loadGratitudes() async {
     final userId = await getOrCreateUserId();
-    final now = DateTime.now();
-    final date = DateFormat('yyyy-MM-dd').format(now);
-    final gratitudes = await ApiClient.getGratitudes(userId, date);
-    setState(() {
-      _gratitudes = gratitudes;
-    });
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final cache = AppCache();
+    // Clear old cache for gratitudes
+    cache.clearOldCacheForType('gratitude_', today);
+    final cacheKey = 'gratitude_$today';
+    // Try cache first
+    final cached = cache.get<List<String>>(cacheKey);
+    if (cached != null) {
+      setState(() {
+        _gratitudes = List<String>.from(cached);
+      });
+      print('got the gratitudes from the cache.');
+      return;
+    }
+    // Otherwise, fetch from backend
+    final gratitudes = await ApiClient.getGratitudes(userId, today);
+    if (gratitudes != null) {
+      cache.set(cacheKey, gratitudes);
+      setState(() {
+        _gratitudes = List<String>.from(gratitudes);
+      });
+    } else {
+      setState(() {
+        _gratitudes = [];
+      });
+    }
   }
-
 
   Future<void> _addGratitude() async {
     final text = _gratitudeController.text.trim();
@@ -52,6 +72,10 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
       final date = DateFormat('yyyy-MM-dd').format(now);
       print('Current: $_gratitudes');
       await ApiClient.putGratitudes(userId, date, _gratitudes);
+      // Update cache
+      final cache = AppCache();
+      final cacheKey = 'gratitude_$date';
+      cache.set(cacheKey, _gratitudes);
     }
   }
 
