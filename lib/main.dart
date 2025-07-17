@@ -17,6 +17,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'utils/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
 void main() async {
   // Ensure Flutter is initialized first
@@ -91,11 +92,12 @@ if (settings.authorizationStatus == AuthorizationStatus.authorized ||
     final fcmToken = await FirebaseMessaging.instance.getToken();
     final prefs = await SharedPreferences.getInstance();
     final reminderStrings = prefs.getStringList('reminders') ?? ['8:0', '5:0'];
-    await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings);
+    final timeZone = await FlutterNativeTimezone.getLocalTimezone();
+    await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings, timeZone);
 
     // Listen for FCM token refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      await ApiClient.updateUserProfile(userId, newToken, reminderStrings);
+      await ApiClient.updateUserProfile(userId, newToken, reminderStrings, timeZone);
     });
 
     print('All services initialized, starting app');

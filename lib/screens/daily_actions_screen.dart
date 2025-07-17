@@ -9,6 +9,9 @@ import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
 import '../shared/text_styles.dart';
+import '../utils/api_client.dart';
+import 'package:intl/intl.dart';
+import '../utils/notification_service.dart';
 
 class DailyActionsScreen extends StatefulWidget {
   @override
@@ -60,6 +63,11 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   Future<void> _saveActions() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_todayKey, json.encode(_actions));
+    // Also save to backend
+    final userId = await getOrCreateUserId();
+    final now = DateTime.now();
+    final date = DateFormat('yyyy-MM-dd').format(now);
+    await ApiClient.putActions(userId, date, _actions);
   }
 
   void _addAction() {

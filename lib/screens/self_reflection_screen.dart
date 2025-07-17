@@ -9,6 +9,9 @@ import '../widgets/background_image.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
+import '../utils/api_client.dart';
+import 'package:intl/intl.dart';
+import '../utils/notification_service.dart';
 
 class SelfReflectionScreen extends StatefulWidget {
   @override
@@ -136,7 +139,6 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   }
 
   Future<void> _saveTodayAnswers() async {
-    print('Attempting to save reflection...');
     final prefs = await SharedPreferences.getInstance();
     final todayKey = _todayKey();
     final answers = _controllers.map((c) => c.text).toList();
@@ -146,10 +148,17 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
       _submitted = true;
     });
     await PointsUtils.incrementToday();
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Reflection saved! 🌟')),
     );
     print('Saving reflection to key: self_reflection_${AppDateUtils.getDateKey(DateTime.now())}');
+
+    // Also save to backend
+    final userId = await getOrCreateUserId();
+    final now = DateTime.now();
+    final date = DateFormat('yyyy-MM-dd').format(now);
+    await ApiClient.putReflection(userId, date, answers);
   }
 
   String _todayKey() {
@@ -175,8 +184,6 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
     _q4Controller.dispose();
     super.dispose();
   }
-
-
 
   void _nextCard() {
     if (_formKey.currentState!.validate()) {

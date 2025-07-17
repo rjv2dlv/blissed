@@ -9,6 +9,7 @@ import '../widgets/euphoric_card.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../utils/api_client.dart';
 import '../utils/notification_service.dart';
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
 class ReminderSettingsScreen extends StatefulWidget {
   @override
@@ -49,9 +50,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
 
   Future<void> _saveReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final reminderStrings = _reminders.map((t) {
-      return '${t.hour}:${t.minute}';
-    }).toList();
+    final reminderStrings = _reminders.map((t) => '${t.hour}:${t.minute}').toList();
     await prefs.setStringList('reminders', reminderStrings);
     // Cancel all previous notifications and reschedule
     await NotificationService.cancelAllReminders();
@@ -61,7 +60,8 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
     // Update user profile in backend
     final userId = await getOrCreateUserId();
     final fcmToken = await FirebaseMessaging.instance.getToken();
-    await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings);
+    final timeZone = await FlutterNativeTimezone.getLocalTimezone();
+    await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings, timeZone);
   }
 
   Future<void> _addReminder() async {
