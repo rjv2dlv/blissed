@@ -12,6 +12,8 @@ import '../utils/api_client.dart';
 import '../utils/notification_service.dart';
 import 'package:intl/intl.dart';
 import '../utils/app_cache.dart';
+import '../utils/progress_utils.dart';
+
 
 class BestMomentScreen extends StatefulWidget {
   @override
@@ -75,6 +77,9 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
     final cache = AppCache();
     final cacheKey = 'best_moment_$date';
     cache.set(cacheKey, _momentController.text);
+    // Invalidate progress cache
+    cache.remove('progress_$date');
+    await ProgressUtils.addBestMoment();
   }
 
   void _editMoment() {

@@ -14,6 +14,8 @@ import 'package:intl/intl.dart';
 import '../utils/notification_service.dart';
 import 'dart:convert';
 import '../utils/app_cache.dart';
+import '../utils/progress_utils.dart';
+
 
 class SelfReflectionScreen extends StatefulWidget {
   @override
@@ -144,6 +146,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   }
 
   Future<void> _saveTodayAnswers() async {
+    if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
     final todayKey = _todayKey();
     final answers = _controllers.map((c) => c.text).toList();
@@ -163,6 +166,15 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);
     await ApiClient.putReflection(userId, date, answers);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Reflection saved! 🌟')),
+    );
+    print('Saving reflection to backend');
+    // Invalidate progress cache
+    cache.remove('progress_$date');
+    await ProgressUtils.addReflection();
   }
 
   String _todayKey() {

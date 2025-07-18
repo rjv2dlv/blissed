@@ -107,4 +107,13 @@ class ApiClient {
     }
     return [];
   }
+
+  static Future<Map<String, dynamic>?> getProgressStats(String userId) async {
+    final url = Uri.parse('$userBaseUrl/progress/$userId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
 }

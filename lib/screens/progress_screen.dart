@@ -1,3 +1,7 @@
+import '../widgets/stat_card.dart';
+import '../widgets/swipeable_card_section.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,41 +15,25 @@ import '../widgets/euphoric_card.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/swipeable_card_section.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math';
+import 'package:intl/intl.dart';
 
 
 class ProgressScreen extends StatefulWidget {
-  const ProgressScreen({Key? key}) : super(key: key);
-
-  @override
   State<ProgressScreen> createState() => _ProgressScreenState();
 }
 
 class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  Map<String, dynamic> _stats = {};
-  List<Map<String, dynamic>> _recentReflections = [];
-  List<Map<String, dynamic>> _recentActions = [];
-  List<Map<String, dynamic>> _recentGratitude = [];
-  List<Map<String, dynamic>> _recentBestMoments = [];
   bool _isLoading = true;
-  Map<String, int> _contributionMap = {};
+  Map<String, dynamic> _stats = {};
   Map<String, int> _pointsHistory = {};
-  int _totalActionsTaken = 0;
-  int _totalGratitude = 0;
-  int _totalBestMoments = 0;
-  final ScrollController _gridScrollController = ScrollController();
-
-  // Today's stats
+  int _todayPoints = 0;
   int _todayStreak = 0;
   int _todayActions = 0;
   int _todayActionsCompleted = 0;
   int _todayGratitude = 0;
   int _todayReflections = 0;
   bool _todayBestMoment = false;
-  int _todayPoints = 0;
-
-  // Week stats
   int _weekStreak = 0;
   int _weekActions = 0;
   int _weekActionsCompleted = 0;
@@ -53,14 +41,13 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   int _weekReflections = 0;
   int _weekBestMoments = 0;
   bool _weekStatsLoading = true;
-
-  // Month stats
   int _monthStreak = 0;
   int _monthActions = 0;
   int _monthGratitude = 0;
   int _monthReflections = 0;
   int _monthBestMoments = 0;
   bool _monthStatsLoading = true;
+  final ScrollController _gridScrollController = ScrollController();
 
   // Blue color palette (shared)
   static const Color blueMain = Color(0xFF00B4FF);
@@ -72,275 +59,70 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadProgressData();
-    _loadTodayStats();
-    _loadWeekStats();
-    _loadMonthStats();
+    _loadProgressStats();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadProgressData();
+    _loadProgressStats();
   }
 
-  Future<void> _loadProgressData() async {
+  Future<void> _loadProgressStats() async {
+    setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
-    final now = DateTime.now();
-    final recentReflections = [];
-    final recentActions = [];
-    final recentGratitude = [];
-    final recentBestMoments = [];
-    final contributionMap = <String, int>{};
-    int totalReflections = 0;
-    int totalActions = 0;
-    int totalGratitude = 0;
-    int completedActions = 0;
-    int totalActionsTaken = 0;
-    int totalBestMoments = 0;
-
-    // Load points history
-    final pointsHistory = await PointsUtils.getLast30DaysPoints();
-
-    for (int i = 0; i < 26 * 7; i++) {
-      final date = now.subtract(Duration(days: i));
-      final dateKey = AppDateUtils.getDateKey(date);
-      int activityCount = 0;
-
-      // Reflections
-      final reflectionKey = 'self_reflection_$dateKey';
-      final reflectionData = prefs.getStringList(reflectionKey);
-      if (reflectionData != null && reflectionData.length == 4) {
-        totalReflections++;
-        activityCount++;
-        if (i < 21) {
-          recentReflections.add({
-            'date': date,
-            'answers': reflectionData,
-          });
-        }
-      }
-
-      // Actions
-      final actionsKey = 'daily_actions_$dateKey';
-      final actionsData = prefs.getString(actionsKey);
-      if (actionsData != null) {
-        final actions = List<Map<String, dynamic>>.from(json.decode(actionsData));
-        if (actions.isNotEmpty) {
-          totalActions++;
-          final completedCount = actions.where((a) => a['status'] == 'completed').length;
-          completedActions += completedCount;
-          totalActionsTaken += actions.length;
-          activityCount += actions.length;
-          if (i < 21) {
-            recentActions.add({
-              'date': date,
-              'actions': actions,
-              'completed': completedCount,
-              'total': actions.length,
-            });
-          }
-        }
-      }
-
-      // Gratitude
-      final gratitudeKey = 'gratitude_$dateKey';
-      final gratitudeData = prefs.getString(gratitudeKey);
-      if (gratitudeData != null) {
-        final gratitudeList = List<String>.from(json.decode(gratitudeData));
-        if (gratitudeList.isNotEmpty) {
-          totalGratitude += gratitudeList.length;
-          activityCount += gratitudeList.length;
-          if (i < 21) {
-            recentGratitude.add({
-              'date': date,
-              'gratitude': gratitudeList,
-            });
-          }
-        }
-      }
-
-      // Best Moment
-      final bestMomentKey = 'best_moment_$dateKey';
-      final bestMoment = prefs.getString(bestMomentKey);
-      if (bestMoment != null && bestMoment.trim().isNotEmpty) {
-        totalBestMoments++;
-        activityCount++;
-        if (i < 21) {
-          recentBestMoments.add({
-            'date': date,
-            'moment': bestMoment,
-          });
-        }
-      }
-      contributionMap[dateKey] = activityCount;
+    int streak = await _calculateCurrentStreak();
+    final statsString = prefs.getString('progress_stats');
+    if (statsString != null) {
+      final stats = json.decode(statsString);
+      final d = stats['d'] ?? {};
+      final w = stats['w'] ?? {};
+      final m = stats['m'] ?? {};
+      final ph = stats['ph'] ?? {};
+      setState(() {
+        _todayReflections = d['r'] ?? 0;
+        _todayActionsCompleted = d['a'] ?? 0;
+        _todayGratitude = d['g'] ?? 0;
+        _todayBestMoment = (d['b'] ?? 0) > 0;
+        _todayPoints = d['p'] ?? 0;
+        _todayStreak = streak;
+        _weekReflections = w['r'] ?? 0;
+        _weekActionsCompleted = w['a'] ?? 0;
+        _weekGratitude = w['g'] ?? 0;
+        _weekBestMoments = w['b'] ?? 0;
+        _weekStatsLoading = false;
+        _monthReflections = m['r'] ?? 0;
+        _monthActions = m['a'] ?? 0;
+        _monthGratitude = m['g'] ?? 0;
+        _monthBestMoments = m['b'] ?? 0;
+        _monthStatsLoading = false;
+        _pointsHistory = Map<String, int>.from(ph);
+        _isLoading = false;
+      });
+      _weekStreak = await _calculateWeekStreak();
+      _monthStreak = await _calculateMonthStreak();
+      return;
     }
-
+    // If no stats, show empty/default
     setState(() {
-      _stats = {
-        'totalReflections': totalReflections,
-        'totalActions': totalActions,
-        'totalGratitude': totalGratitude,
-        'completedActions': completedActions,
-        'streakDays': AppDateUtils.calculateStreak(prefs),
-        'currentStreak': AppDateUtils.calculateCurrentStreak(prefs),
-        'totalDays': totalReflections + totalGratitude,
-      };
-      _recentReflections = List<Map<String, dynamic>>.from(recentReflections);
-      _recentActions = List<Map<String, dynamic>>.from(recentActions);
-      _recentGratitude = List<Map<String, dynamic>>.from(recentGratitude);
-      _recentBestMoments = List<Map<String, dynamic>>.from(recentBestMoments);
-      _contributionMap = contributionMap;
-      _pointsHistory = pointsHistory;
-      _totalActionsTaken = totalActionsTaken;
-      _totalGratitude = totalGratitude;
-      _totalBestMoments = totalBestMoments;
-      _isLoading = false;
-    });
-
-    // Schedule a scroll to today after the next frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_gridScrollController.hasClients) {
-        _gridScrollController.animateTo(
-          _gridScrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 500),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  Future<void> _loadTodayStats() async {
-    final prefs = await SharedPreferences.getInstance();
-    final now = DateTime.now();
-    final dateKey = '${now.year}_${now.month}_${now.day}';
-
-    // Streak (current streak)
-    _todayStreak = AppDateUtils.calculateCurrentStreak(prefs);
-
-    // Actions
-    final actionsKey = 'daily_actions_$dateKey';
-    final actionsData = prefs.getString(actionsKey);
-    if (actionsData != null) {
-      final actions = List<Map<String, dynamic>>.from(json.decode(actionsData));
-      _todayActions = actions.length;
-      _todayActionsCompleted = actions.where((a) => a['status'] == 'completed').length;
-    } else {
-      _todayActions = 0;
-      _todayActionsCompleted = 0;
-    }
-
-    // Gratitude
-    final gratitudeKey = 'gratitude_$dateKey';
-    final gratitudeData = prefs.getString(gratitudeKey);
-    if (gratitudeData != null) {
-      final gratitudeList = List<String>.from(json.decode(gratitudeData));
-      _todayGratitude = gratitudeList.length;
-    } else {
-      _todayGratitude = 0;
-    }
-
-    // Reflections
-    final reflectionKey = 'self_reflection_$dateKey';
-    final reflectionData = prefs.getStringList(reflectionKey);
-    if (reflectionData != null && reflectionData.length == 4) {
-      _todayReflections = 1;
-    } else {
       _todayReflections = 0;
-    }
-
-    // Best Moment
-    final bestMomentKey = 'best_moment_$dateKey';
-    final bestMoment = prefs.getString(bestMomentKey);
-    _todayBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
-
-    // Points
-    final pointsMap = await PointsUtils.getPointsMap();
-    _todayPoints = pointsMap[dateKey] ?? 0;
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _loadWeekStats() async {
-    final now = DateTime.now();
-    // Start week from Sunday
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7)); // Sunday
-    final weekDays = List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
-    int weekStreak = 0;
-    int weekActions = 0;
-    int weekActionsCompleted = 0;
-    int weekGratitude = 0;
-    int weekReflections = 0;
-    int weekBestMoments = 0;
-    final prefs = await SharedPreferences.getInstance();
-    for (final date in weekDays) {
-      final dateKey = AppDateUtils.getDateKey(date);
-      final hasReflection = prefs.getStringList('self_reflection_$dateKey') != null;
-      final actionsData = prefs.getString('daily_actions_$dateKey');
-      final actions = actionsData != null ? List<Map<String, dynamic>>.from(json.decode(actionsData)) : [];
-      final hasActions = actions.isNotEmpty;
-      final completedActions = actions.where((a) => a['status'] == 'completed').length;
-      final gratitudeData = prefs.getString('gratitude_$dateKey');
-      final hasGratitude = gratitudeData != null && List<String>.from(json.decode(gratitudeData)).isNotEmpty;
-      final bestMoment = prefs.getString('best_moment_$dateKey');
-      final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
-      if (hasReflection || hasActions || hasGratitude || hasBestMoment) weekStreak++;
-      if (hasActions) weekActions += actions.length;
-      weekActionsCompleted += completedActions;
-      if (hasGratitude) weekGratitude += List<String>.from(json.decode(gratitudeData!)).length;
-      if (hasReflection) weekReflections++;
-      if (hasBestMoment) weekBestMoments++;
-    }
-    setState(() {
-      _weekStreak = weekStreak;
-      _weekActions = weekActions;
-      _weekActionsCompleted = weekActionsCompleted;
-      _weekGratitude = weekGratitude;
-      _weekReflections = weekReflections;
-      _weekBestMoments = weekBestMoments;
+      _todayActionsCompleted = 0;
+      _todayGratitude = 0;
+      _todayBestMoment = false;
+      _todayPoints = 0;
+      _todayStreak = streak;
+      _weekReflections = 0;
+      _weekActionsCompleted = 0;
+      _weekGratitude = 0;
+      _weekBestMoments = 0;
       _weekStatsLoading = false;
-    });
-  }
-
-  Future<void> _loadMonthStats() async {
-    final now = DateTime.now();
-    final firstDay = DateTime(now.year, now.month, 1);
-    final lastDay = DateTime(now.year, now.month + 1, 0);
-    final monthDays = List.generate(lastDay.day, (i) => DateTime(now.year, now.month, i + 1));
-    int monthStreak = 0;
-    int monthActions = 0;
-    int monthGratitude = 0;
-    int monthReflections = 0;
-    int monthBestMoments = 0;
-    final prefs = await SharedPreferences.getInstance();
-    for (final date in monthDays) {
-      final dateKey = AppDateUtils.getDateKey(date);
-      final hasReflection = prefs.getStringList('self_reflection_$dateKey') != null;
-      final actionsData = prefs.getString('daily_actions_$dateKey');
-      final hasActions = actionsData != null && List<Map<String, dynamic>>.from(json.decode(actionsData)).isNotEmpty;
-      final gratitudeData = prefs.getString('gratitude_$dateKey');
-      final hasGratitude = gratitudeData != null && List<String>.from(json.decode(gratitudeData)).isNotEmpty;
-      final bestMoment = prefs.getString('best_moment_$dateKey');
-      final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
-      if (hasReflection || hasActions || hasGratitude || hasBestMoment) monthStreak++;
-      if (hasActions) {
-        final actions = List<Map<String, dynamic>>.from(json.decode(actionsData!));
-        final completedCount = actions.where((a) => a['status'] == 'completed').length;
-        monthActions += completedCount;
-      }
-      if (hasGratitude) monthGratitude += List<String>.from(json.decode(gratitudeData!)).length;
-      if (hasReflection) monthReflections++;
-      if (hasBestMoment) monthBestMoments++;
-    }
-    setState(() {
-      _monthStreak = monthStreak;
-      _monthActions = monthActions;
-      _monthGratitude = monthGratitude;
-      _monthReflections = monthReflections;
-      _monthBestMoments = monthBestMoments;
+      _monthReflections = 0;
+      _monthActions = 0;
+      _monthGratitude = 0;
+      _monthBestMoments = 0;
       _monthStatsLoading = false;
+      _pointsHistory = {};
+      _isLoading = false;
     });
   }
 
@@ -412,13 +194,17 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
     if (_isLoading || _weekStatsLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    // 1. Bar chart for the current week (Sunday start)
+    // 1. Bar chart for the current week (Monday start, local time)
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7)); // Sunday
+    // Dart: weekday 1=Mon, 7=Sun. To get Monday as start:
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1)); // Monday
     final weekDays = List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
-    final weekPoints = weekDays.map((date) => _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0).toList();
+    final weekPoints = weekDays.map((date) => _pointsHistory[DateFormat('yyyy-MM-dd').format(date)] ?? 0).toList();
     final maxBar = weekPoints.isEmpty ? 1 : weekPoints.reduce((a, b) => a > b ? a : b);
-    final todayIndex = weekDays.indexWhere((d) => d.day == now.day && d.month == now.month && d.year == now.year);
+    // Find today index in weekDays (local date)
+    final today = DateTime.now();
+    final todayKey = DateFormat('yyyy-MM-dd').format(today);
+    final todayIndex = weekDays.indexWhere((d) => DateFormat('yyyy-MM-dd').format(d) == todayKey);
     final totalPoints = weekPoints.fold(0, (a, b) => a + b);
     // Average based on days so far in the week (up to today)
     final daysSoFar = todayIndex + 1;
@@ -439,7 +225,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
       int sum = 0;
       for (int d = 0; d < 7; d++) {
         final date = start.add(Duration(days: d));
-        sum += _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0;
+        sum += _pointsHistory[DateFormat('yyyy-MM-dd').format(date)] ?? 0;
       }
       return sum;
     }).toList();
@@ -582,7 +368,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                                     style: TextStyle(
                                       color: blueMain,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontSize: 9,
                                     ),
                                   ),
                                 )
@@ -591,7 +377,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 13,
+                                    fontSize: 11,
                                   ),
                                 ),
                         );
@@ -680,7 +466,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
       {'value': _monthBestMoments.toString(), 'label': 'Best Moment'},
     ];
     // Points and average for the month
-    final monthPoints = monthDays.fold(0, (sum, date) => sum + (_pointsHistory[AppDateUtils.getDateKey(date)] ?? 0));
+    final monthPoints = monthDays.fold(0, (sum, date) => sum + (_pointsHistory[DateFormat('yyyy-MM-dd').format(date)] ?? 0));
     final today = DateTime.now();
     final daysSoFar = today.month == now.month && today.year == now.year ? today.day : lastDay.day;
     final monthAvg = daysSoFar > 0 ? (monthPoints / daysSoFar).round() : 0;
@@ -697,7 +483,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
       int sum1 = 0;
       for (int d = 0; d < 15 && d < daysInMonth; d++) {
         final date = DateTime(start.year, start.month, d + 1);
-        sum1 += _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0;
+        sum1 += _pointsHistory[DateFormat('yyyy-MM-dd').format(date)] ?? 0;
       }
       halfMonthTotals.add(sum1);
       halfMonthLabels.add(_shortMonthLabel(start));
@@ -705,7 +491,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
       int sum2 = 0;
       for (int d = 15; d < daysInMonth; d++) {
         final date = DateTime(start.year, start.month, d + 1);
-        sum2 += _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0;
+        sum2 += _pointsHistory[DateFormat('yyyy-MM-dd').format(date)] ?? 0;
       }
       halfMonthTotals.add(sum2);
       halfMonthLabels.add('•');
@@ -771,7 +557,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                             if (date == null) {
                               return Container(width: 32, height: 32);
                             }
-                            final dateKey = AppDateUtils.getDateKey(date);
+                            final dateKey = DateFormat('yyyy-MM-dd').format(date);
                             final points = _pointsHistory[dateKey] ?? 0;
                             final bestMoment = prefs.getString('best_moment_$dateKey');
                             final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
@@ -860,7 +646,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                                     style: const TextStyle(
                                       color: blueMain,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontSize: 9,
                                     ),
                                   ),
                                 )
@@ -869,7 +655,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 13,
+                                    fontSize: 12,
                                   ),
                                 ),
                         );
@@ -1046,14 +832,20 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   }
 
   Widget _buildLineChartPlaceholder() {
-    // Get last 7 days' points
+    print('Points history: $_pointsHistory');
     final now = DateTime.now();
     final days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
-    final points = days.map((date) => _pointsHistory[AppDateUtils.getDateKey(date)] ?? 0).toList();
+    for (final date in days) {
+      print('Chart date key: ${DateFormat('yyyy-MM-dd').format(date)} value: ${_pointsHistory[DateFormat('yyyy-MM-dd').format(date)]}');
+    }
+    final points = days.map((date) => _pointsHistory[DateFormat('yyyy-MM-dd').format(date)] ?? 0).toList();
     final maxPoints = points.isEmpty ? 1 : points.reduce((a, b) => a > b ? a : b).toDouble();
     final avgPoints = points.isEmpty ? 0 : points.reduce((a, b) => a + b) / points.length;
     final weekLabels = days.map((d) => _weekdayAbbr(d.weekday)).toList();
-    final todayIndex = days.indexWhere((d) => d.day == now.day && d.month == now.month && d.year == now.year);
+    final today = DateTime.now();
+    final todayKey = DateFormat('yyyy-MM-dd').format(today);
+    //final todayIndex = days.indexWhere((d) => AppDateUtils.getDateKey(d) == todayKey);
+    final todayIndex = now.weekday % 7;
 
     return Container(
       height: 160,
@@ -1095,7 +887,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                               style: const TextStyle(
                                 color: blueMain,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                fontSize: 9,
                               ),
                             ),
                           )
@@ -1104,7 +896,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                             style: const TextStyle(
                               color: Colors.white70,
                               fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                           ),
                   );
@@ -1165,7 +957,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   }
 
   String _weekdayAbbr(int weekday) {
-    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     return days[(weekday % 7)];
   }
 
@@ -1200,6 +992,66 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
         ],
       ),
     );
+  }
+
+  Future<int> _calculateCurrentStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    int currentStreak = 0;
+    for (int i = 0; i < 30; i++) {
+      final date = now.subtract(Duration(days: i));
+      final dateKey = AppDateUtils.getDateKey(date);
+      final hasReflection = prefs.getStringList('self_reflection_$dateKey') != null;
+      final hasActions = prefs.getString('daily_actions_$dateKey') != null;
+      final hasGratitude = prefs.getString('gratitude_$dateKey') != null;
+      final hasBestMoment = prefs.getString('best_moment_$dateKey') != null;
+      if (hasReflection || hasActions || hasGratitude || hasBestMoment) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+    return currentStreak;
+  }
+
+  Future<int> _calculateWeekStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    // Dart: weekday 1=Mon, 7=Sun. To get Monday as start:
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    int weekStreak = 0;
+    for (int i = 0; i < 7; i++) {
+      final date = startOfWeek.add(Duration(days: i));
+      final dateKey = AppDateUtils.getDateKey(date); // Use the same format as your data
+      final hasReflection = prefs.getStringList('self_reflection_$dateKey') != null;
+      final hasActions = prefs.getString('daily_actions_$dateKey') != null;
+      final hasGratitude = prefs.getString('gratitude_$dateKey') != null;
+      final hasBestMoment = prefs.getString('best_moment_$dateKey') != null;
+      if (hasReflection || hasActions || hasGratitude || hasBestMoment) {
+        weekStreak++;
+      }
+    }
+    return weekStreak;
+  }
+
+  Future<int> _calculateMonthStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year, now.month, 1);
+    final lastDay = DateTime(now.year, now.month + 1, 0);
+    int monthStreak = 0;
+    for (int i = 0; i < lastDay.day; i++) {
+      final date = firstDay.add(Duration(days: i));
+      final dateKey = AppDateUtils.getDateKey(date); // Use the same format as your data
+      final hasReflection = prefs.getStringList('self_reflection_$dateKey') != null;
+      final hasActions = prefs.getString('daily_actions_$dateKey') != null;
+      final hasGratitude = prefs.getString('gratitude_$dateKey') != null;
+      final hasBestMoment = prefs.getString('best_moment_$dateKey') != null;
+      if (hasReflection || hasActions || hasGratitude || hasBestMoment) {
+        monthStreak++;
+      }
+    }
+    return monthStreak;
   }
 }
 

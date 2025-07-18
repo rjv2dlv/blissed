@@ -14,6 +14,8 @@ import 'package:intl/intl.dart';
 import '../utils/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_cache.dart';
+import '../utils/progress_utils.dart';
+
 
 class DailyActionsScreen extends StatefulWidget {
   @override
@@ -111,6 +113,8 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final cacheKey = 'actions_$today';
     cache.set(cacheKey, _actions);
+    // Invalidate progress cache
+    cache.remove('progress_$today');
   }
 
   void _addAction() {
@@ -143,6 +147,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Action Marked Completed')),
         );
+        await ProgressUtils.addActionCompleted();
       }
       else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -388,5 +393,11 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _actionController.dispose();
+    super.dispose();
   }
 } 

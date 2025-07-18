@@ -14,6 +14,8 @@ import '../utils/notification_service.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../utils/app_cache.dart';
+import '../utils/progress_utils.dart';
+
 
 class GratitudeScreen extends StatefulWidget {
   @override
@@ -36,7 +38,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
     final cache = AppCache();
     // Clear old cache for gratitudes
     cache.clearOldCacheForType('gratitude_', today);
-    final cacheKey = 'gratitude_$today';
+    final cacheKey = 'gratitude_' + today;
     // Try cache first
     final cached = cache.get<List<String>>(cacheKey);
     if (cached != null) {
@@ -74,8 +76,11 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
       await ApiClient.putGratitudes(userId, date, _gratitudes);
       // Update cache
       final cache = AppCache();
-      final cacheKey = 'gratitude_$date';
+      final cacheKey = 'gratitude_' + date;
       cache.set(cacheKey, _gratitudes);
+      // Invalidate progress cache
+      cache.remove('progress_' + date);
+      await ProgressUtils.addGratitude();
     }
   }
 
