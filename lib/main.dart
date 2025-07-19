@@ -18,10 +18,12 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'utils/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'utils/progress_utils.dart';
 
 void main() async {
   // Ensure Flutter is initialized first
   WidgetsFlutterBinding.ensureInitialized();
+  await ProgressUtils.cleanOldSharedPrefs();
 
   // Global error handler for all uncaught Dart errors
 
@@ -210,6 +212,7 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+    print('main init happening..');
     _screens = [
       SelfReflectionScreen(),
       DailyActionsScreen(),
@@ -286,19 +289,23 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
         centerTitle: true,
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/wa_background.jpeg',
-              fit: BoxFit.cover,
-              color: Colors.black.withOpacity(0.08),
-              colorBlendMode: BlendMode.darken,
-              cacheWidth: 1080,
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF000000),
+              Color(0xFF1a1a1a),
+              Color(0xFF2d2d2d),
+            ],
           ),
-          _screens[_selectedIndex],
-        ],
+        ),
+        child: _screens[_selectedIndex],
+        /*IndexedStack(
+          index: _selectedIndex,
+          children: _screens,
+        ),*/
       ),
       bottomNavigationBar: Container(
         width: double.infinity,

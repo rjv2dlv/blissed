@@ -50,7 +50,9 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
 
   Future<void> _saveReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final reminderStrings = _reminders.map((t) => '${t.hour}:${t.minute}').toList();
+    final reminderStrings = _reminders.map((t) => 
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}'
+    ).toList();
     await prefs.setStringList('reminders', reminderStrings);
     // Cancel all previous notifications and reschedule
     await NotificationService.cancelAllReminders();

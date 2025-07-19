@@ -103,5 +103,26 @@ class ProgressUtils {
     await _saveStats(stats);
   }
 
+  static Future<void> cleanOldSharedPrefs() async {
+    print('RUNNING CLEANUP');
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    print('Keys: ${keys}');
+    // Patterns to match old data keys
+    final patternsToRemove = [
+      RegExp(r'^self_reflection_\d{4}_\d{1,2}_\d{1,2}$'), // e.g., self_reflection_2025_7_17
+      RegExp(r'^daily_actions_\d{4}_\d{1,2}_\d{1,2}$'),   // e.g., daily_actions_2025_7_17
+      // Add more patterns if needed
+    ];
+    for (final key in keys) {
+      if (patternsToRemove.any((pattern) => pattern.hasMatch(key))) {
+        await prefs.remove(key);
+        print('Removed $key');
+      }
+    }
+
+    print('Remaining keys: ${prefs.getKeys()}');
+  }
+
   // Optionally, add methods to decrement stats if an entry is deleted/edited
 }

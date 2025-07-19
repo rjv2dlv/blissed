@@ -16,6 +16,7 @@ import '../widgets/stat_card.dart';
 import '../widgets/swipeable_card_section.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../utils/progress_utils.dart';
 
 
 class ProgressScreen extends StatefulWidget {
@@ -69,6 +70,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   }
 
   Future<void> _loadProgressStats() async {
+    await ProgressUtils.rolloverIfNeeded();
     setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
     int streak = await _calculateCurrentStreak();
@@ -267,7 +269,34 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                 alignment: BarChartAlignment.spaceAround,
                 maxY: maxBar < 8 ? 8 : maxBar * 1.2,
                 minY: 0,
-                barTouchData: BarTouchData(enabled: false),
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    tooltipBgColor: Colors.black87,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final dayLabel = _weekdayAbbr(weekDays[groupIndex].weekday);
+                      final points = weekPoints[groupIndex];
+                      return BarTooltipItem(
+                        '$dayLabel\n',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: '$points pts',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -448,7 +477,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
     final firstDay = DateTime(now.year, now.month, 1);
     final lastDay = DateTime(now.year, now.month + 1, 0);
     final monthDays = List.generate(lastDay.day, (i) => DateTime(now.year, now.month, i + 1));
-    final firstWeekday = firstDay.weekday % 7; // 0=Sun, 1=Mon, ...
+    final firstWeekday = (firstDay.weekday + 6) % 7; // 0=Mon, 6=Sun
     final totalCells = ((firstWeekday + lastDay.day) / 7).ceil() * 7;
     final calendarCells = List.generate(totalCells, (i) {
       final dayNum = i - firstWeekday + 1;
@@ -532,12 +561,12 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
-                    Text('S', style: TextStyle(color: Colors.white54)),
                     Text('M', style: TextStyle(color: Colors.white54)),
                     Text('T', style: TextStyle(color: Colors.white54)),
                     Text('W', style: TextStyle(color: Colors.white54)),
                     Text('T', style: TextStyle(color: Colors.white54)),
                     Text('F', style: TextStyle(color: Colors.white54)),
+                    Text('S', style: TextStyle(color: Colors.white54)),
                     Text('S', style: TextStyle(color: Colors.white54)),
                   ],
                 ),
@@ -547,6 +576,14 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) return const SizedBox(height: 200);
                     final prefs = snapshot.data!;
+                    //print('All keys: ${prefs.getKeys()}');
+                    final keys = prefs.getKeys();
+                    print('-------------------------------');
+                    for (var key in keys) {
+                        final value = prefs.get(key); // Gets dynamic value
+                        print('$key: $value');
+                    }
+                    print('-------------------------------');
                     return Column(
                       children: List.generate((calendarCells.length / 7).ceil(), (row) {
                         return Row(
@@ -558,9 +595,10 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                               return Container(width: 32, height: 32);
                             }
                             final dateKey = DateFormat('yyyy-MM-dd').format(date);
+                            // Use progress stats for best moment count
+                            final stats = _stats[dateKey]; // or your stats map for the day
+                            final hasBestMoment = stats != null && (stats['b'] ?? 0) > 0;
                             final points = _pointsHistory[dateKey] ?? 0;
-                            final bestMoment = prefs.getString('best_moment_$dateKey');
-                            final hasBestMoment = bestMoment != null && bestMoment.trim().isNotEmpty;
                             final isFilled = points > 0;
                             return Container(
                               width: 32,
@@ -580,12 +618,11 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  if (hasBestMoment && isFilled)
+                                  if (hasBestMoment)
                                     const Positioned(
-                                      bottom: -0.7,
-                                      left: 0,
-                                      right: 0,
-                                      child: Icon(Icons.star, color: Colors.black, size: 9),
+                                      bottom: 2,
+                                      right: 2,
+                                      child: Icon(Icons.star, color: Colors.amber, size: 12),
                                     ),
                                 ],
                               ),
@@ -835,17 +872,12 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
     print('Points history: $_pointsHistory');
     final now = DateTime.now();
     final days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
-    for (final date in days) {
-      print('Chart date key: ${DateFormat('yyyy-MM-dd').format(date)} value: ${_pointsHistory[DateFormat('yyyy-MM-dd').format(date)]}');
-    }
     final points = days.map((date) => _pointsHistory[DateFormat('yyyy-MM-dd').format(date)] ?? 0).toList();
     final maxPoints = points.isEmpty ? 1 : points.reduce((a, b) => a > b ? a : b).toDouble();
     final avgPoints = points.isEmpty ? 0 : points.reduce((a, b) => a + b) / points.length;
     final weekLabels = days.map((d) => _weekdayAbbr(d.weekday)).toList();
-    final today = DateTime.now();
-    final todayKey = DateFormat('yyyy-MM-dd').format(today);
-    //final todayIndex = days.indexWhere((d) => AppDateUtils.getDateKey(d) == todayKey);
-    final todayIndex = now.weekday % 7;
+    final todayKey = DateFormat('yyyy-MM-dd').format(now);
+    final todayIndex = days.indexWhere((d) => DateFormat('yyyy-MM-dd').format(d) == todayKey);
 
     return Container(
       height: 160,

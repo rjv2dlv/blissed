@@ -17,19 +17,19 @@ class BackgroundImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Image.asset(
-            imagePath,
-            fit: BoxFit.cover,
-            color: Colors.black.withOpacity(opacity),
-            colorBlendMode: blendMode,
-            cacheWidth: MediaQuery.of(context).size.width.toInt(),
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF000000),
+            Color(0xFF1a1a1a),
+            Color(0xFF2d2d2d),
+          ],
         ),
-        child,
-      ],
+      ),
+      child: child,
     );
   }
 } 

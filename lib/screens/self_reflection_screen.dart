@@ -147,10 +147,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
 
   Future<void> _saveTodayAnswers() async {
     if (!mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    final todayKey = _todayKey();
     final answers = _controllers.map((c) => c.text).toList();
-    await prefs.setStringList(todayKey, answers);
     setState(() {
       _todayAnswers = answers;
       _submitted = true;

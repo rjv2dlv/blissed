@@ -79,6 +79,7 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
     cache.set(cacheKey, _momentController.text);
     // Invalidate progress cache
     cache.remove('progress_$date');
+    print('savig best moment $cacheKey');
     await ProgressUtils.addBestMoment();
   }
 

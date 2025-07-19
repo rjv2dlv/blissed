@@ -1,8 +1,3 @@
-import '../utils/app_cache.dart';
-import 'package:intl/intl.dart';
-
-final cache = AppCache();
-
 class AppCache {
   static final AppCache _instance = AppCache._internal();
   factory AppCache() => _instance;
@@ -12,6 +7,7 @@ class AppCache {
 
   void set(String key, dynamic value) {
     _cache[key] = value;
+    print('cache size: ${_cache.length}');
   }
 
   T? get<T>(String key) {
