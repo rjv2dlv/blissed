@@ -104,24 +104,43 @@ class ProgressUtils {
   }
 
   static Future<void> cleanOldSharedPrefs() async {
-    print('RUNNING CLEANUP');
     final prefs = await SharedPreferences.getInstance();
     final keys = prefs.getKeys();
-    print('Keys: ${keys}');
-    // Patterns to match old data keys
-    final patternsToRemove = [
-      RegExp(r'^self_reflection_\d{4}_\d{1,2}_\d{1,2}$'), // e.g., self_reflection_2025_7_17
-      RegExp(r'^daily_actions_\d{4}_\d{1,2}_\d{1,2}$'),   // e.g., daily_actions_2025_7_17
-      // Add more patterns if needed
-    ];
+    
+    print('Cleaning old SharedPreferences keys...');
+    print('Current keys: $keys');
+    
+    // Remove old per-day data keys (keep only aggregated counts)
+    final keysToRemove = <String>[];
+    
     for (final key in keys) {
-      if (patternsToRemove.any((pattern) => pattern.hasMatch(key))) {
-        await prefs.remove(key);
-        print('Removed $key');
+      // Remove old per-day data keys (keep progress stats and points)
+      if (key.startsWith('self_reflection_') || 
+          key.startsWith('daily_actions_') || 
+          key.startsWith('best_moment_') || 
+          key.startsWith('gratitude_') ||
+          key.startsWith('reflection_') ||
+          key.startsWith('actions_') ||
+          key.startsWith('bestMoments_') ||
+          key.startsWith('gratitude_')) {
+        keysToRemove.add(key);
+      }
+      
+      // Remove reminder-related keys since we're only using Firebase notifications
+      if (key.startsWith('reminder_') || 
+          key == 'reminders' ||
+          key.contains('reminder')) {
+        keysToRemove.add(key);
+        print('Removing reminder key: $key');
       }
     }
-
-    print('Remaining keys: ${prefs.getKeys()}');
+    
+    for (final key in keysToRemove) {
+      await prefs.remove(key);
+      print('Removed key: $key');
+    }
+    
+    print('Cleanup complete. Removed ${keysToRemove.length} keys.');
   }
 
   // Optionally, add methods to decrement stats if an entry is deleted/edited

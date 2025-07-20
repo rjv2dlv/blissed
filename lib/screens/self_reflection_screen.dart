@@ -11,7 +11,6 @@ import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
 import '../utils/api_client.dart';
 import 'package:intl/intl.dart';
-import '../utils/notification_service.dart';
 import 'dart:convert';
 import '../utils/app_cache.dart';
 import '../utils/progress_utils.dart';
@@ -112,7 +111,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
   }
 
   Future<void> _loadTodayReflection() async {
-    final userId = await getOrCreateUserId();
+    final userId = await ApiClient.getOrCreateUserId();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final cache = AppCache();
     // Clear old cache for reflections
@@ -159,7 +158,7 @@ class _SelfReflectionScreenState extends State<SelfReflectionScreen> {
     final cacheKey = 'reflection_$today';
     cache.set(cacheKey, answers);
     // Also save to backend
-    final userId = await getOrCreateUserId();
+    final userId = await ApiClient.getOrCreateUserId();
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);
     await ApiClient.putReflection(userId, date, answers);

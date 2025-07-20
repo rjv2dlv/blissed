@@ -9,7 +9,6 @@ import '../utils/points_utils.dart';
 import '../shared/text_styles.dart';
 import '../shared/gradient_button.dart';
 import '../utils/api_client.dart';
-import '../utils/notification_service.dart';
 import 'package:intl/intl.dart';
 import '../utils/app_cache.dart';
 import '../utils/progress_utils.dart';
@@ -32,7 +31,7 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
   }
 
   Future<void> _loadBestMoment() async {
-    final userId = await getOrCreateUserId();
+    final userId = await ApiClient.getOrCreateUserId();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final cache = AppCache();
     // Clear old cache for best moments
@@ -69,7 +68,7 @@ class _BestMomentScreenState extends State<BestMomentScreen> {
       _savedMoment = _momentController.text;
     });
     // Save to backend only
-    final userId = await getOrCreateUserId();
+    final userId = await ApiClient.getOrCreateUserId();
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);
     await ApiClient.putBestMoment(userId, date, _momentController.text);

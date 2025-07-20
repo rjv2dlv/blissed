@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../shared/gradient_button.dart';
 import '../utils/app_colors.dart';
@@ -8,7 +7,7 @@ import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../utils/api_client.dart';
-import '../utils/notification_service.dart';
+import '../utils/app_cache.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
 class ReminderSettingsScreen extends StatefulWidget {
@@ -19,6 +18,7 @@ class ReminderSettingsScreen extends StatefulWidget {
 class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
   List<TimeOfDay> _reminders = [];
   bool _isLoading = true;
+  final AppCache _cache = AppCache();
 
   @override
   void initState() {
@@ -27,40 +27,89 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
   }
 
   Future<void> _loadReminders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final reminderStrings = prefs.getStringList('reminders');
-    if (reminderStrings == null || reminderStrings.isEmpty) {
-      // Set default reminders if none exist
-      _reminders = [
-        const TimeOfDay(hour: 8, minute: 0),
-        const TimeOfDay(hour: 17, minute: 0),
-      ];
-      await _saveReminders();
-    } else {
+    // Try to load from cache first
+    final cachedReminders = _cache.get<List<String>>('reminders');
+    if (cachedReminders != null && cachedReminders.isNotEmpty) {
+      print('Loading reminders from cache: $cachedReminders');
       setState(() {
-        _reminders = reminderStrings.map((s) {
+        _reminders = cachedReminders.map((s) {
           final parts = s.split(':');
           return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
         }).toList();
         _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
         _isLoading = false;
       });
+    } else {
+      // No cache or SharedPreferences, fetch from backend
+      print('No local reminders found, fetching from backend...');
+      
+      // Clear any existing cache to ensure fresh data
+      _cache.remove('reminders');
+      
+      try {
+        final userId = await ApiClient.getOrCreateUserId();
+        final userProfile = await ApiClient.getUserProfile(userId);
+        
+        if (userProfile != null && userProfile['reminder_times'] != null) {
+          final backendReminders = List<String>.from(userProfile['reminder_times']);
+          if (backendReminders.isNotEmpty) {
+            // Update cache with backend data
+            _cache.set('reminders', backendReminders);
+            
+            setState(() {
+              _reminders = backendReminders.map((s) {
+                final parts = s.split(':');
+                if (parts.length != 2) {
+                  print('Invalid time format: $s');
+                  return const TimeOfDay(hour: 8, minute: 0); // fallback
+                }
+                final hour = int.tryParse(parts[0]) ?? 8;
+                final minute = int.tryParse(parts[1]) ?? 0;
+                return TimeOfDay(hour: hour, minute: minute);
+              }).toList();
+              _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
+              _isLoading = false;
+            });
+          } else {
+            print('Backend returned empty reminders, using defaults');
+            // Backend returned empty, use defaults
+            _setDefaultReminders();
+          }
+        } else {
+          print('No user profile or no reminder_times field, using defaults');
+          // No user profile or no reminders, use defaults
+          _setDefaultReminders();
+        }
+      } catch (e) {
+        print('Error fetching reminders from backend: $e');
+        // Fallback to defaults on error
+        _setDefaultReminders();
+      }
     }
   }
 
+  void _setDefaultReminders() {
+    setState(() {
+      _reminders = [
+        const TimeOfDay(hour: 8, minute: 0),
+        const TimeOfDay(hour: 17, minute: 0),
+      ];
+      _isLoading = false;
+    });
+    // Save defaults to cache and backend
+    _saveReminders();
+  }
+
   Future<void> _saveReminders() async {
-    final prefs = await SharedPreferences.getInstance();
     final reminderStrings = _reminders.map((t) => 
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}'
     ).toList();
-    await prefs.setStringList('reminders', reminderStrings);
-    // Cancel all previous notifications and reschedule
-    await NotificationService.cancelAllReminders();
-    for (final t in _reminders) {
-      await NotificationService.scheduleSmartReminder(t);
-    }
-    // Update user profile in backend
-    final userId = await getOrCreateUserId();
+    
+    // Update cache first
+    _cache.set('reminders', reminderStrings);
+    
+    // Update user profile in backend (Lambda will handle notifications)
+    final userId = await ApiClient.getOrCreateUserId();
     final fcmToken = await FirebaseMessaging.instance.getToken();
     final timeZone = await FlutterNativeTimezone.getLocalTimezone();
     await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings, timeZone);
@@ -76,7 +125,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
         _reminders.add(picked);
         _reminders.sort((a, b) => a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute);
       });
-      _saveReminders();
+      await _saveReminders();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Reminder added at ${picked.format(context)}')),
       );
@@ -87,7 +136,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
     setState(() {
       _reminders.removeAt(index);
     });
-    _saveReminders();
+    await _saveReminders();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Reminder Removed')),
     );

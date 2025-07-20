@@ -10,11 +10,13 @@ import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
 import '../shared/text_styles.dart';
 import '../utils/api_client.dart';
-import '../utils/notification_service.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../utils/app_cache.dart';
 import '../utils/progress_utils.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
 
 class GratitudeScreen extends StatefulWidget {
@@ -33,7 +35,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
   }
 
   Future<void> _loadGratitudes() async {
-    final userId = await getOrCreateUserId();
+    final userId = await ApiClient.getOrCreateUserId();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final cache = AppCache();
     // Clear old cache for gratitudes
@@ -69,7 +71,7 @@ class _GratitudeScreenState extends State<GratitudeScreen> {
         _gratitudes.add(text);
         _gratitudeController.clear();
       });
-      final userId = await getOrCreateUserId();
+      final userId = await ApiClient.getOrCreateUserId();
       final now = DateTime.now();
       final date = DateFormat('yyyy-MM-dd').format(now);
       print('Current: $_gratitudes');

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../shared/gradient_button.dart';
 import '../utils/app_colors.dart';
@@ -9,12 +8,14 @@ import '../widgets/gradient_header.dart';
 import '../widgets/euphoric_card.dart';
 import '../utils/points_utils.dart';
 import '../shared/text_styles.dart';
-import '../utils/api_client.dart';
 import 'package:intl/intl.dart';
-import '../utils/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../utils/api_client.dart';
 import '../utils/app_cache.dart';
 import '../utils/progress_utils.dart';
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
 
 class DailyActionsScreen extends StatefulWidget {
@@ -64,7 +65,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         return;
       }
       // Otherwise, fetch from backend
-      final userId = await getOrCreateUserId();
+      final userId = await ApiClient.getOrCreateUserId();
       final now = DateTime.now();
       final date = DateFormat('yyyy-MM-dd').format(now);
       final response = await ApiClient.getActions(userId, date);
@@ -104,7 +105,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
 
   Future<void> _saveActions() async {
     // Only save to backend
-    final userId = await getOrCreateUserId();
+    final userId = await ApiClient.getOrCreateUserId();
     final now = DateTime.now();
     final date = DateFormat('yyyy-MM-dd').format(now);
     await ApiClient.putActions(userId, date, _actions);

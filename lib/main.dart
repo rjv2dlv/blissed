@@ -9,7 +9,6 @@ import 'screens/best_moment_screen.dart';
 import 'screens/history_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'utils/app_colors.dart';
-import 'utils/notification_service.dart';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -80,26 +79,18 @@ if (settings.authorizationStatus == AuthorizationStatus.authorized ||
       // Continue without Crashlytics if it fails
     }
     
-    // Initialize other services last
-    try {
-      await NotificationService.initialize();
-      print('Notifications initialized');
-    } catch (e) {
-      print('Notification service initialization failed: $e');
-      // Continue without notifications if it fails
-    }
-
     // On app launch, ensure user is saved/updated in backend
-    final userId = await getOrCreateUserId();
+    final userId = await ApiClient.getOrCreateUserId();
     final fcmToken = await FirebaseMessaging.instance.getToken();
-    final prefs = await SharedPreferences.getInstance();
-    final reminderStrings = prefs.getStringList('reminders') ?? ['8:0', '5:0'];
     final timeZone = await FlutterNativeTimezone.getLocalTimezone();
-    await ApiClient.updateUserProfile(userId, fcmToken ?? '', reminderStrings, timeZone);
+    
+    // Only update FCM token and timezone, preserve existing reminders
+    await ApiClient.updateFcmTokenAndTimezone(userId, fcmToken ?? '', timeZone);
 
     // Listen for FCM token refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      await ApiClient.updateUserProfile(userId, newToken, reminderStrings, timeZone);
+      // Only update FCM token, preserve existing reminders
+      await ApiClient.updateFcmTokenAndTimezone(userId, newToken, timeZone);
     });
 
     print('All services initialized, starting app');

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'app_apis.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 class ApiClient {
 
@@ -9,6 +11,26 @@ class ApiClient {
     static const String userReflectionBaseUrl = AppAPIs.USER_REFLECTIONS_API_BASE_URL;
     static const String userBestMomentsBaseUrl = AppAPIs.USER_BEST_MOMENTS_API_BASE_URL;
     static const String userGratitudeBaseUrl = AppAPIs.USER_GRATITUDE_API_BASE_URL;
+
+    static Future<String> getOrCreateUserId() async {
+        final prefs = await SharedPreferences.getInstance();
+        String? userId = prefs.getString('user_id');
+        if (userId == null) {
+            userId = const Uuid().v4();
+            await prefs.setString('user_id', userId);
+        }
+        return userId;
+    }
+
+    static Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+        final url = Uri.parse('$userBaseUrl/users/$userId');
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            return data;
+        }
+        return null;
+    }
 
   static Future<http.Response> putUser(String userId, Map<String, dynamic> data) async {
     final url = Uri.parse('$userBaseUrl/users/$userId');
@@ -29,6 +51,32 @@ class ApiClient {
       print('User update response: ${response.statusCode} ${response.body}');
     } catch (e) {
       print('Failed to update user profile: ${e.toString()}');
+    }
+  }
+
+  static Future<void> updateFcmTokenAndTimezone(String userId, String fcmToken, String timeZone) async {
+    try {
+      // First get current user profile to preserve existing data
+      final currentProfile = await getUserProfile(userId);
+      if (currentProfile != null) {
+        // Update only FCM token and timezone, preserve existing reminders
+        final response = await putUser(userId, {
+          'fcm_token': fcmToken,
+          'reminder_times': currentProfile['reminder_times'] ?? [],
+          'timezone': timeZone,
+        });
+        print('FCM/Timezone update response: ${response.statusCode} ${response.body}');
+      } else {
+        // If no profile exists, create one with default reminders
+        final response = await putUser(userId, {
+          'fcm_token': fcmToken,
+          'reminder_times': ['08:00', '17:00'],
+          'timezone': timeZone,
+        });
+        print('New user profile created with default reminders: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      print('Failed to update FCM token and timezone: ${e.toString()}');
     }
   }
 
