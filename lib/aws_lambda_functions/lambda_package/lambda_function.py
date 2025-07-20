@@ -2,10 +2,11 @@ import os
 import json
 import boto3
 import requests
+import random
 from datetime import datetime
 from google.oauth2 import service_account
 import google.auth.transport.requests
-import pytz  # <-- Make sure this is in your Lambda package
+import pytz
 
 SECRET_NAME = 'fcm-service-account-json'
 PROJECT_ID = 'blissed-28e44'
@@ -16,6 +17,7 @@ actions_table = dynamodb.Table('Actions')
 reflections_table = dynamodb.Table('Reflections')
 gratitude_table = dynamodb.Table('Gratitude')
 
+
 def get_service_account_file(secret_name=SECRET_NAME):
     client = boto3.client('secretsmanager')
     secret = client.get_secret_value(SecretId=secret_name)
@@ -25,6 +27,7 @@ def get_service_account_file(secret_name=SECRET_NAME):
         f.write(secret_json)
     return path
 
+
 def get_access_token(service_account_file):
     credentials = service_account.Credentials.from_service_account_file(
         service_account_file,
@@ -33,6 +36,7 @@ def get_access_token(service_account_file):
     auth_req = google.auth.transport.requests.Request()
     credentials.refresh(auth_req)
     return credentials.token
+
 
 def send_fcm_v1(token, title, body, service_account_file):
     access_token = get_access_token(service_account_file)
@@ -54,12 +58,38 @@ def send_fcm_v1(token, title, body, service_account_file):
     print(response.status_code, response.text)
     return response
 
+
+# --- Helper Functions for Dynamic Reminders ---
+
+PENDING_MESSAGES = [
+    "Still pending: '{}'. Knock it off your list now!",
+    "Quick nudge – remember to: '{}'",
+    "Make today productive. Try finishing: '{}'",
+    "You've got this! Just tackle: '{}'",
+    "Still on your plate: '{}'. Let’s get it done!"
+]
+
+REFLECTION_MESSAGES = [
+    "A little self-reflection goes a long way. What are you feeling today?",
+    "Pause. Reflect. Write it down. Your thoughts matter.",
+    "Jot down your self-reflection for today — it's like a mirror for the mind.",
+    "Don’t forget your daily reflection. Let your thoughts breathe!",
+    "Self-reflection time! Make space for your inner voice."
+]
+
+REFLECTION_PROMPT_MAP = {
+    'who_do_you_want_to_be': "Who do you want to be today?",
+    'how_will_you_connect': "How will you connect with people today?",
+    'what_will_make_day_amazing': "What can you do to make your day amazing?",
+    'two_changes_to_show_up': "2 simple changes for how you show up?"
+}
+
+
 def lambda_handler(event, context):
     print("Scheduler Lambda started")
     service_account_file = get_service_account_file()
     now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
 
-    # 1. Scan all users
     users = users_table.scan().get('Items', [])
     print(f"Found {len(users)} users.")
 
@@ -68,10 +98,10 @@ def lambda_handler(event, context):
         fcm_token = user.get('fcm_token')
         reminder_times = user.get('reminder_times', [])
         timezone = user.get('timezone', 'UTC')
+
         if not fcm_token or not reminder_times or not timezone:
             continue
 
-        # Convert current UTC time to user's local time zone
         try:
             user_tz = pytz.timezone(timezone)
         except Exception as e:
@@ -82,33 +112,79 @@ def lambda_handler(event, context):
         current_local_time = now_local.strftime('%H:%M')
         today_local = now_local.strftime('%Y-%m-%d')
 
-        # Check if current local time matches any reminder time
         if current_local_time not in reminder_times:
             continue
 
         print(f"Processing user: {user_id} at {current_local_time} ({timezone})")
 
-        # 2. Check for pending actions
+        # Fetch user-specific data
         actions_resp = actions_table.get_item(Key={'user_id': user_id, 'date': today_local})
         actions = actions_resp.get('Item', {}).get('actions', [])
         pending = [a for a in actions if a['status'] == 'pending']
 
-        if pending:
-            action = pending[0]
-            send_fcm_v1(fcm_token, "Complete your pending task!", f"Don't forget: {action['text']}", service_account_file)
-            continue
-
-        # 3. Check for missing reflection
         reflection_resp = reflections_table.get_item(Key={'user_id': user_id, 'date': today_local})
-        if 'Item' not in reflection_resp:
-            send_fcm_v1(fcm_token, "Reflection Reminder", "Don't forget to complete your self-reflection today!", service_account_file)
-            continue
+        reflection_data = reflection_resp.get('Item')
 
-        # 4. Check for missing gratitude
         gratitude_resp = gratitude_table.get_item(Key={'user_id': user_id, 'date': today_local})
-        if 'Item' not in gratitude_resp:
-            send_fcm_v1(fcm_token, "Gratitude Reminder", "Add something you're grateful for today!", service_account_file)
-            continue
+        gratitude_data = gratitude_resp.get('Item')
+
+        # Define available notification handlers
+        notification_handlers = {}
+
+        if pending:
+            def handle_pending():
+                action = random.choice(pending)
+                msg_template = random.choice(PENDING_MESSAGES)
+                send_fcm_v1(
+                    fcm_token,
+                    "Pending Task Reminder",
+                    msg_template.format(action['text']),
+                    service_account_file
+                )
+            notification_handlers['pending'] = handle_pending
+
+        if not reflection_data:
+            def handle_missing_reflection():
+                send_fcm_v1(
+                    fcm_token,
+                    "Time to Reflect",
+                    random.choice(REFLECTION_MESSAGES),
+                    service_account_file
+                )
+            notification_handlers['missing_reflection'] = handle_missing_reflection
+
+        if reflection_data:
+            def handle_existing_reflection():
+                possible_keys = list(REFLECTION_PROMPT_MAP.keys())
+                random.shuffle(possible_keys)
+                for key in possible_keys:
+                    answer = reflection_data.get(key)
+                    if answer:
+                        question = REFLECTION_PROMPT_MAP[key]
+                        send_fcm_v1(
+                            fcm_token,
+                            "Your Reflection Today",
+                            f"{question} — You said: \"{answer}\"",
+                            service_account_file
+                        )
+                        break
+            notification_handlers['existing_reflection'] = handle_existing_reflection
+
+        if not gratitude_data:
+            def handle_missing_gratitude():
+                send_fcm_v1(
+                    fcm_token,
+                    "Gratitude Reminder",
+                    "Add something you're grateful for today — even the little things count!",
+                    service_account_file
+                )
+            notification_handlers['missing_gratitude'] = handle_missing_gratitude
+
+        # Pick and execute one handler at random
+        if notification_handlers:
+            selected_key = random.choice(list(notification_handlers.keys()))
+            print(f"Sending '{selected_key}' notification for user: {user_id}")
+            notification_handlers[selected_key]()
 
     print("Scheduler Lambda finished")
     return {
