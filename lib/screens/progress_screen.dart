@@ -82,6 +82,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
       final m = stats['m'] ?? {};
       final ph = stats['ph'] ?? {};
       setState(() {
+        _stats = stats;
         _todayReflections = d['r'] ?? 0;
         _todayActionsCompleted = d['a'] ?? 0;
         _todayGratitude = d['g'] ?? 0;
@@ -552,90 +553,102 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
               ],
             ),
           ),
-          // Calendar grid
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          // Month calendar grid
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text('M', style: TextStyle(color: Colors.white54)),
-                    Text('T', style: TextStyle(color: Colors.white54)),
-                    Text('W', style: TextStyle(color: Colors.white54)),
-                    Text('T', style: TextStyle(color: Colors.white54)),
-                    Text('F', style: TextStyle(color: Colors.white54)),
-                    Text('S', style: TextStyle(color: Colors.white54)),
-                    Text('S', style: TextStyle(color: Colors.white54)),
-                  ],
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                      .map((day) => Text(day, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12)))
+                      .toList(),
                 ),
                 const SizedBox(height: 8),
-                FutureBuilder<SharedPreferences>(
-                  future: prefs,
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const SizedBox(height: 200);
-                    final prefs = snapshot.data!;
-                    //print('All keys: ${prefs.getKeys()}');
-                    final keys = prefs.getKeys();
-                    print('-------------------------------');
-                    for (var key in keys) {
-                        final value = prefs.get(key); // Gets dynamic value
-                        print('$key: $value');
-                    }
-                    print('-------------------------------');
-                    return Column(
-                      children: List.generate((calendarCells.length / 7).ceil(), (row) {
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: List.generate(7, (col) {
-                            final idx = row * 7 + col;
-                            final date = idx < calendarCells.length ? calendarCells[idx] : null;
-                            if (date == null) {
-                              return Container(width: 32, height: 32);
-                            }
-                            final dateKey = DateFormat('yyyy-MM-dd').format(date);
-                            // Use progress stats for best moment count
-                            final stats = _stats[dateKey]; // or your stats map for the day
-                            final hasBestMoment = stats != null && (stats['b'] ?? 0) > 0;
-                            final points = _pointsHistory[dateKey] ?? 0;
-                            final isFilled = points > 0;
-                            return Container(
-                              width: 32,
-                              height: 32,
-                              margin: const EdgeInsets.symmetric(vertical: 2),
-                              decoration: BoxDecoration(
-                                color: isFilled ? blueMain : blueGrey,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Text(
-                                    date.day.toString(),
-                                    style: TextStyle(
-                                      color: isFilled ? Colors.black : Colors.white54,
-                                      fontWeight: FontWeight.bold,
+                Column(
+                  children: List.generate((totalCells / 7).ceil(), (row) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: List.generate(7, (col) {
+                          final index = row * 7 + col;
+                          if (index >= totalCells) return const SizedBox(width: 32, height: 32);
+
+                          final date = calendarCells[index];
+                          if (date == null) {
+                            return const SizedBox(width: 32, height: 32);
+                          }
+
+                          final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
+                          final dateKey = DateFormat('yyyy-MM-dd').format(date);
+                          final points = _pointsHistory[dateKey] ?? 0;
+                          final hasBestMoment = isToday && _todayBestMoment;
+
+                          return SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: points > 0
+                                ? CustomPaint(
+                                    painter: PartialBorderPainter(
+                                      points: points,
+                                      color: blueMain,
+                                      strokeWidth: 3,
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: isToday ? blueMain.withOpacity(0.3) : Colors.transparent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Text(
+                                              date.day.toString(),
+                                              style: TextStyle(
+                                                color: isToday ? Colors.white : Colors.white70,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            if (hasBestMoment)
+                                              Positioned(
+                                                bottom: -2,
+                                                child: Icon(Icons.star, color: Colors.amber.shade400, size: 12),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      color: blueGrey,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        date.day.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white54,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  if (hasBestMoment)
-                                    const Positioned(
-                                      bottom: 2,
-                                      right: 2,
-                                      child: Icon(Icons.star, color: Colors.amber, size: 12),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }),
-                        );
-                      }),
+                          );
+                        }),
+                      ),
                     );
-                  },
+                  }),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 5),
           // Stat cards for month
           SizedBox(
             height: 120,
@@ -648,7 +661,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
           ),
           // Line chart for last 6 months, 2 points per month
           Container(
-            height: 160,
+            height: 140,
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 0),
             child: LineChart(
@@ -1127,4 +1140,47 @@ class _RoundedCircularProgressPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class PartialBorderPainter extends CustomPainter {
+  final int points;
+  final Color color;
+  final double strokeWidth;
+
+  PartialBorderPainter({required this.points, required this.color, this.strokeWidth = 2.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points <= 0) return;
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    double sweepAngleRadians = 0;
+    if (points >= 12) {
+      sweepAngleRadians = 2 * pi; // Full circle
+    } else if (points >= 6) {
+      sweepAngleRadians = pi; // Half circle
+    } else if (points >= 4) {
+      sweepAngleRadians = (2 * pi) / 3; // One-third circle
+    } else {
+      sweepAngleRadians = pi / 3; // Small slice for 1-3 points
+    }
+
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: size.width / 2 - strokeWidth / 2),
+      -pi / 2, // Start from the top
+      sweepAngleRadians,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant PartialBorderPainter oldDelegate) {
+    return oldDelegate.points != points || oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+  }
 } 

@@ -41,6 +41,7 @@ class ProgressUtils {
     stats['m']['r'] = (stats['m']['r'] ?? 0) + 1;
     await _saveStats(stats);
     await addPoints(1);
+    print('After addReflection: ${stats['d']}');
   }
 
   static Future<void> addActionCompleted() async {
@@ -101,6 +102,7 @@ class ProgressUtils {
       stats['m'] = {'r': 0, 'a': 0, 'g': 0, 'b': 0, 'p': 0, 'k': month};
     }
     await _saveStats(stats);
+    print('Rollover check: stats[d][date]=${stats['d']['date']} todayKey=$today');
   }
 
   static Future<void> cleanOldSharedPrefs() async {
